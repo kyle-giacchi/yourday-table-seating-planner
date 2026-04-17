@@ -99,8 +99,7 @@ const ASSIGNED_DEMO_IDS = new Set([
   '5',
   '6',
   '7',
-  '8',
-  '9', // Table 1 (9 guests)
+  '8', // Table 1 (8 guests)
   '10',
   '11',
   '12',
@@ -127,7 +126,7 @@ const demoGuest = (id: string): Guest => DEMO_GUESTS.find((g) => g.id === id)!;
 
 /**
  * Four pre-built demo tables:
- * - Table 1: over-assigned (9 guests, max 8)
+ * - Table 1: full at max capacity (8/8)
  * - Table 2: full at default capacity (8/8)
  * - Table 3: partially filled (4/8)
  * - Table 4: partially filled (3/6)
@@ -145,7 +144,7 @@ export const DEMO_TABLES: Table[] = [
     commonUse: 'Small banquet, meeting',
     defaultChairs: 6,
     maxChairs: 8,
-    guests: ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(demoGuest),
+    guests: ['1', '2', '3', '4', '5', '6', '7', '8'].map(demoGuest),
   },
   {
     id: 'demo-table-2',
