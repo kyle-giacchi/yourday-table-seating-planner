@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YourDay — Table & Seating Planner</title>
+    <meta
+      name="description"
+      content="YourDay is an open-source visual room layout and seating planner for weddings, banquets, galas, and events. Drag-and-drop tables, manage guest lists, assign seats. 100% client-side — no accounts, no backend."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.png" type="image/png" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="YourDay — Table & Seating Planner" />
+    <meta
+      property="og:description"
+      content="An open-source visual room layout and seating planner for weddings, banquets, galas, and events. 100% client-side — no accounts, no backend."
+    />
+    <meta property="og:image" content="/og-image.jpg" />
+    <meta property="og:site_name" content="YourDay" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="YourDay — Table & Seating Planner" />
+    <meta
+      name="twitter:description"
+      content="An open-source visual room layout and seating planner for weddings, banquets, galas, and events."
+    />
+    <meta name="twitter:image" content="/og-image.jpg" />
+
+    <!-- Playfair Display font is self-hosted in public/fonts/ and declared in src/index.css -->
+    <link
+      rel="preload"
+      href="/fonts/playfair-display-v40-latin-regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/playfair-display-v40-latin-ext.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

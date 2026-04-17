@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Seat back -->
+  <path d="M8 4C8 2.9 8.9 2 10 2h12c1.1 0 2 .9 2 2v12H8V4z" rx="2" fill="#6366f1"/>
+  <!-- Seat cushion -->
+  <rect x="6" y="16" width="20" height="5" rx="2" fill="#818cf8"/>
+  <!-- Left leg -->
+  <rect x="8" y="21" width="3" height="9" rx="1.5" fill="#6366f1"/>
+  <!-- Right leg -->
+  <rect x="21" y="21" width="3" height="9" rx="1.5" fill="#6366f1"/>
+</svg>

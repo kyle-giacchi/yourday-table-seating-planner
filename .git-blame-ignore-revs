@@ -1,0 +1,3 @@
+# Revisions listed here are skipped by `git blame` and GitHub's blame view.
+# Enable locally with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs

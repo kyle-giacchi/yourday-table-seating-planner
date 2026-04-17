@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      @font-face {
+        font-family: 'Playfair Display';
+        src: url('../public/fonts/playfair-display-v40-latin-regular.woff2') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+        font-display: block;
+      }
+      :root {
+        --primary: #1e40af;
+        --primary-light: #3b82f6;
+        --accent-coral: #e11d48;
+        --accent-emerald: #059669;
+        --accent-purple: #8b5cf6;
+        --accent-burgundy: #9f1239;
+        --accent-amber: #d97706;
+        --accent-teal: #0d9488;
+        --ink: #0f172a;
+        --muted: #475569;
+        --cream: #fdfbf7;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: var(--ink);
+        background: var(--cream);
+      }
+      .card {
+        position: relative;
+        width: 1200px;
+        height: 630px;
+        background:
+          radial-gradient(1200px 500px at 50% -10%, rgba(30, 64, 175, 0.08), transparent 70%),
+          linear-gradient(180deg, #fdfbf7 0%, #f8f5ee 100%);
+        padding: 64px 80px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .brand-mark {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Playfair Display', serif;
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .brand-name {
+        font-family: 'Playfair Display', serif;
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--ink);
+      }
+      .hero {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        max-width: 1040px;
+      }
+      .hero-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 128px;
+        line-height: 0.95;
+        font-weight: 400;
+        color: var(--primary);
+        letter-spacing: -0.02em;
+      }
+      .hero-title .your {
+        font-weight: 400;
+        font-style: normal;
+      }
+      .hero-title .day {
+        font-style: italic;
+      }
+      .hero-tag {
+        font-size: 34px;
+        line-height: 1.2;
+        font-weight: 500;
+        color: var(--ink);
+        letter-spacing: -0.005em;
+      }
+      .hero-sub {
+        font-size: 22px;
+        line-height: 1.4;
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .color-chips {
+        display: flex;
+        gap: 14px;
+      }
+      .chip {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+      }
+      .chip.blue {
+        background: var(--primary);
+      }
+      .chip.emerald {
+        background: var(--accent-emerald);
+      }
+      .chip.coral {
+        background: var(--accent-coral);
+      }
+      .chip.purple {
+        background: var(--accent-purple);
+      }
+      .chip.burgundy {
+        background: var(--accent-burgundy);
+      }
+      .chip.amber {
+        background: var(--accent-amber);
+      }
+      .chip.teal {
+        background: var(--accent-teal);
+      }
+      .url {
+        font-size: 18px;
+        font-weight: 500;
+        color: var(--muted);
+        letter-spacing: 0.02em;
+      }
+      /* Subtle table glyph in bottom-right corner */
+      .table-illo {
+        position: absolute;
+        right: 56px;
+        top: 72px;
+        width: 200px;
+        height: 200px;
+        opacity: 0.18;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="brand">
+        <div class="brand-mark">Y</div>
+        <div class="brand-name">YourDay</div>
+      </div>
+
+      <svg class="table-illo" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="100" cy="100" r="58" fill="none" stroke="#1e40af" stroke-width="3" />
+        <circle cx="100" cy="30" r="12" fill="#1e40af" />
+        <circle cx="100" cy="170" r="12" fill="#1e40af" />
+        <circle cx="30" cy="100" r="12" fill="#1e40af" />
+        <circle cx="170" cy="100" r="12" fill="#1e40af" />
+        <circle cx="150" cy="50" r="12" fill="#1e40af" />
+        <circle cx="50" cy="50" r="12" fill="#1e40af" />
+        <circle cx="150" cy="150" r="12" fill="#1e40af" />
+        <circle cx="50" cy="150" r="12" fill="#1e40af" />
+      </svg>
+
+      <div class="hero">
+        <div class="hero-title">
+          It's <span class="your">YOUR</span> <span class="day">day.</span>
+        </div>
+        <div class="hero-tag">A visual table layout and seating planner</div>
+        <div class="hero-sub">
+          Arrange your tables. Seat your guests. See your vision come to life.
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="color-chips" aria-hidden="true">
+          <div class="chip blue"></div>
+          <div class="chip emerald"></div>
+          <div class="chip coral"></div>
+          <div class="chip purple"></div>
+          <div class="chip burgundy"></div>
+          <div class="chip amber"></div>
+          <div class="chip teal"></div>
+        </div>
+        <div class="url">yourday.app</div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,1 @@
+export { SeatingCanvas } from './SeatingCanvas';

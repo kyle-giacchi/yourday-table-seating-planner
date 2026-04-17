@@ -1,0 +1,67 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+coverage
+*.tsbuildinfo
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Claude Code local memory
+.claude/
+
+# Environment variable files with secrets
+.env.local
+.env.production
+.env.*.local
+
+# Cloudflare local dev secrets (wrangler pages dev)
+.dev.vars
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# MCP servers and agent state
+.agents/
+.playwright-mcp/
+
+# Local planning / AI-workflow artifacts (not shipped in the public repo)
+docs/plans/
+docs/superpowers/
+
+# Generated artifacts
+screenshots/
+public/screenshots/
+tsc-errors.txt
+vibecop-final.json
+
+# Stray screenshot artifacts at repo root
+/welcome-*.png
+/edit-scale-*.png
+/room-*.png
+/full-page.png
+/seating-after-bulk-add.png
+
+# Wrangler local state (kept for forks that may re-enable a backend)
+.wrangler/
