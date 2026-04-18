@@ -4,7 +4,7 @@ A visual event planner for designing venue floor plans, placing tables, managing
 
 100% client-side. No accounts. No backend. Your data lives in your browser.
 
-**➡️ [Try it live](https://your-day-demo.example.com)** &nbsp;·&nbsp; or run locally with `npm install && npm run dev` (instructions below).
+**➡️ [Try it live](https://yourday.kgiacchi.workers.dev/)** &nbsp;·&nbsp; or run locally with `npm install && npm run dev` (instructions below).
 
 ![Homepage](docs/01-homepage.png)
 
