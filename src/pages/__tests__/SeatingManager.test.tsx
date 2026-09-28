@@ -33,7 +33,7 @@ vi.mock('@/components/seating/CanvasToolbar', () => ({
 vi.mock('@/components/seating', () => ({
   SeatingCanvas: () => <div />,
 }));
-vi.mock('@/components/seating/TableEditor', () => ({
+vi.mock('@/components/seating/table-editor/TableEditor', () => ({
   TableEditor: () => <div />,
 }));
 vi.mock('@/hooks/useColumnHeightSync', () => ({

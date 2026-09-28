@@ -1,1 +1,0 @@
-export { TableEditor } from './table-editor';

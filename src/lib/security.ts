@@ -164,35 +164,6 @@ export const getGenericErrorMessage = (context: string): string => {
   return messages[context] || messages['default'];
 };
 
-// Rate limiting utility
-export class RateLimiter {
-  private requests: Map<string, number[]> = new Map();
-
-  constructor(
-    private maxRequests: number = 10,
-    private windowMs: number = 60000,
-  ) {}
-
-  isAllowed(identifier: string): boolean {
-    const now = Date.now();
-    const windowStart = now - this.windowMs;
-
-    let timestamps = this.requests.get(identifier) || [];
-    timestamps = timestamps.filter((time) => time > windowStart);
-
-    if (timestamps.length >= this.maxRequests) {
-      return false;
-    }
-
-    timestamps.push(now);
-    this.requests.set(identifier, timestamps);
-    return true;
-  }
-}
-
-// Create a rate limiter instance for bulk operations
-export const bulkOperationLimiter = new RateLimiter(5, 60000); // 5 operations per minute
-
 // Sanitize all string fields of a guest object at once.
 // Safe to call with partial objects — only fields that are present are sanitized.
 export const sanitizeGuestData = (guest: {

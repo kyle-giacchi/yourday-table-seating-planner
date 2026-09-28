@@ -11,7 +11,6 @@ Top-level components:
 - **AddTableDropdown** -- dropdown to add predefined table types
 - **ImageLayoutSetup** -- upload + position background venue image
 - **BaseRoomComponent** -- shared drag/resize behavior for room rectangles
-- **TableEditor** -- right-panel barrel that delegates to `table-editor/`
 
 Subdirectories:
 
@@ -154,7 +153,6 @@ src/
     fileUtils.ts                    # File handling utilities
     imageUtils.ts                   # Image processing
     performance.ts                  # useRAFThrottle, useCachedElement hooks
-    errorReporting.ts               # Global error/rejection listeners
     __tests__/
       capacityChecker.test.ts       # Capacity checker unit tests
       safeStorage.test.ts           # Safe storage unit tests
@@ -174,7 +172,6 @@ src/
       CanvasToolbar.tsx
       AddTableDropdown.tsx
       AddAssetDropdown.tsx          # Asset picker dropdown for the canvas toolbar
-      TableEditor.tsx               # Barrel re-export from table-editor/
       types.ts
       table/                        # Table rendering + drag
       table-editor/                 # Table list/detail editor panel
