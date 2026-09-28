@@ -45,7 +45,6 @@ export const useTableDrag = ({
 
   useEffect(() => {
     if (currentGuestCount > prevGuestCountRef.current) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- drives 1-second user-visible pulse animation on guest assignment; refactor risk outweighs warning
       setRecentlyAssigned(true);
       const timer = setTimeout(() => setRecentlyAssigned(false), 1000);
       prevGuestCountRef.current = currentGuestCount;

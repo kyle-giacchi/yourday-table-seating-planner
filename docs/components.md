@@ -10,9 +10,7 @@ Top-level components:
 - **CanvasToolbar** -- toolbar above canvas (add table, image setup, config import/export)
 - **AddTableDropdown** -- dropdown to add predefined table types
 - **ImageLayoutSetup** -- upload + position background venue image
-- **ConfigurationActions** -- download/upload full configuration JSON
 - **BaseRoomComponent** -- shared drag/resize behavior for room rectangles
-- **TableEditor** -- right-panel barrel that delegates to `table-editor/`
 
 Subdirectories:
 
@@ -109,23 +107,23 @@ src/
     dragDrop.ts                     # DragData, DropHandlerOptions
   services/
     DataRepository.ts               # LocalStorageRepository — the only persistence layer
+    projectStore.ts                 # AppData in memory: debounced save, flush, reload, import/export
     guestImportService.ts           # Pure function: parse/dedupe/sanitize guest imports
     __tests__/
       DataRepository.test.ts        # Repository unit tests
   contexts/
-    AppDataProvider.tsx              # Loads from localStorage, debounced save (300ms)
+    AppDataProvider.tsx              # Subscribes to projectStore; cross-tab reload + flush on hide
     SeatingDataProvider.tsx          # Tables + guests + assignments (composes hooks from seating/)
     seating/                         # useEntityRefs, useSeatingOperations, useSeatingSyncEffects, types
     UIStateContext.tsx               # Selection, zoom, canvas dimensions
     RoomContext.tsx                  # Room layout, background, scale (pushes changes up)
-    UndoProvider.tsx                 # Single-action undo for last assignment
+    AssignmentProvider.tsx           # assign/dropOnTable, the one CapacityModal, last-assignment undo
     MealOptionsContext.tsx           # Dynamic meal option list
     ColorThemeContext.tsx            # Theme color selection
   hooks/
     useSeating.ts                   # Unified hook (all 3 core contexts merged)
     useEntityReducer.ts             # Generic CRUD reducer + setEntities for bulk replacement
-    useTableAssignment.ts           # Capacity-checked assignment logic (ref-based modal)
-    useDragDropHandler.ts           # Drag-and-drop event processing
+    useTableAssignment.ts           # Context + hook for AssignmentProvider
     useCanvasControls.ts            # Zoom state and controls
     useCanvasDimensionsObserver.ts  # ResizeObserver for canvas element
     useRoomOperations.ts            # Room outline/border/scale operations
@@ -138,10 +136,11 @@ src/
   utils/
     migrations.ts                   # Data version migrations (1.0.0 -> 1.1.0 -> 1.2.0)
     tableNumberUtils.ts             # Gap-filling table number assignment
-    configExportUtils.ts            # Download/import configuration JSON files
+    configExportUtils.ts            # Browser download of exported configuration JSON
     seatPositioning.ts              # Seat position calculations (round & rect)
     roomUtils.ts                    # Scale calculations, coordinate conversions
     partyUtils.ts                   # Party grouping utilities
+    seatingModel.ts                 # Pure assign/unassign/reorder/preview transitions
     dragUtils.ts                    # Standardized drag-start handlers (guest + party)
   lib/
     capacityChecker.ts              # Three-tier capacity check
@@ -154,7 +153,6 @@ src/
     fileUtils.ts                    # File handling utilities
     imageUtils.ts                   # Image processing
     performance.ts                  # useRAFThrottle, useCachedElement hooks
-    errorReporting.ts               # Global error/rejection listeners
     __tests__/
       capacityChecker.test.ts       # Capacity checker unit tests
       safeStorage.test.ts           # Safe storage unit tests
@@ -174,8 +172,6 @@ src/
       CanvasToolbar.tsx
       AddTableDropdown.tsx
       AddAssetDropdown.tsx          # Asset picker dropdown for the canvas toolbar
-      ConfigurationActions.tsx
-      TableEditor.tsx               # Barrel re-export from table-editor/
       types.ts
       table/                        # Table rendering + drag
       table-editor/                 # Table list/detail editor panel

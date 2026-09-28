@@ -54,7 +54,7 @@ src/components/room-setup/
 
 ## Data flow
 
-Setup state lives in `appData.settings` and is mutated through `useRoomOperations()` (which `RoomContext` exposes). Every change flows up to `AppDataContext.updateSettingsSlice()` and rides the standard 300 ms debounced save.
+Setup state lives in `appData.settings` and is mutated through `useRoomOperations()` (which `RoomContext` exposes). Every change goes through `AppDataContext.updateSettings(fn)` and rides the standard 300 ms debounced save.
 
 ```
 StepUploadImage

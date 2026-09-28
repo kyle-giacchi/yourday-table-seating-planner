@@ -13,7 +13,7 @@ beforeAll(() => {
 });
 
 import { SeatingDataProvider } from '@/contexts/SeatingDataProvider';
-import { UndoProvider } from '@/contexts/UndoProvider';
+import { AssignmentProvider } from '@/contexts/AssignmentProvider';
 import { UIStateProvider } from '@/contexts/UIStateProvider';
 import { RoomProvider } from '@/contexts/RoomProvider';
 import { AddAssetDropdown } from '@/components/seating/AddAssetDropdown';
@@ -25,7 +25,7 @@ import { SeatingCanvas } from '@/components/seating/SeatingCanvas';
 
 const mockUpdateSeatingSlice = vi.fn();
 const mockUpdateAssetsSlice = vi.fn();
-const mockUpdateSettingsSlice = vi.fn();
+const mockUpdateSettings = vi.fn();
 
 vi.mock('@/contexts/AppDataContext', () => ({
   useAppData: () => ({
@@ -46,7 +46,7 @@ vi.mock('@/contexts/AppDataContext', () => ({
     dataVersion: 0,
     updateSeatingSlice: mockUpdateSeatingSlice,
     updateAssetsSlice: mockUpdateAssetsSlice,
-    updateSettingsSlice: mockUpdateSettingsSlice,
+    updateSettings: mockUpdateSettings,
   }),
 }));
 
@@ -61,11 +61,11 @@ vi.mock('@/hooks/use-toast', () => ({
 
 const AllProviders = ({ children }: { children: ReactNode }) => (
   <SeatingDataProvider>
-    <UndoProvider>
+    <AssignmentProvider>
       <UIStateProvider>
         <RoomProvider>{children}</RoomProvider>
       </UIStateProvider>
-    </UndoProvider>
+    </AssignmentProvider>
   </SeatingDataProvider>
 );
 

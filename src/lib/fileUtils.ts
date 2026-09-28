@@ -60,9 +60,7 @@ interface ProcessedRows {
 }
 
 type RowOutcome =
-  | { kind: 'ok'; row: ParsedGuestData }
-  | { kind: 'error'; message: string }
-  | { kind: 'skip' };
+  { kind: 'ok'; row: ParsedGuestData } | { kind: 'error'; message: string } | { kind: 'skip' };
 
 const parseGuestRow = (row: unknown, rowNumber: number): RowOutcome => {
   if (!Array.isArray(row)) return { kind: 'skip' };

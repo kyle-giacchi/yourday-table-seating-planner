@@ -17,6 +17,7 @@ import {
 import { ColorSelector } from '@/components/color/ColorSelector';
 import { useColorTheme, COLOR_THEMES } from '@/contexts/ColorThemeContext';
 import { useSeatingData } from '@/contexts/SeatingDataContext';
+import { useAppData } from '@/contexts/AppDataContext';
 import { useToast } from '@/hooks/use-toast';
 import { clamp } from '@/lib/utils';
 import { TABLE_SPECIFICATIONS } from '@/types/seating';
@@ -62,6 +63,7 @@ const Index = () => {
   const { isAnimating, selectedTheme, setSelectedTheme } = useColorTheme();
   const seatingCtx = useSeatingData();
   const { loadDemoData, addTables } = seatingCtx;
+  const { discardPending } = useAppData();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [autoRotating, setAutoRotating] = useState(true);
@@ -120,9 +122,10 @@ const Index = () => {
   }, []);
 
   const handleStartFresh = useCallback(() => {
+    discardPending();
     safeLocalStorage.clear();
     window.location.reload();
-  }, []);
+  }, [discardPending]);
 
   const handleTryDemo = () => {
     loadDemoData();

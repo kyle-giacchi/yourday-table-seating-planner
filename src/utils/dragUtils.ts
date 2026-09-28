@@ -39,7 +39,7 @@ const attachDragImage = (e: React.DragEvent, label: string, sublabel?: string): 
 
   document.body.appendChild(chip);
   e.dataTransfer.setDragImage(chip, 0, chip.offsetHeight / 2);
-  requestAnimationFrame(() => document.body.removeChild(chip));
+  requestAnimationFrame(() => chip.remove());
 };
 
 /**

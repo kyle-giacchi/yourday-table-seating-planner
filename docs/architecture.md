@@ -8,7 +8,7 @@ TooltipProvider
     ColorThemeProvider  -- 7-preset color theme + 800ms HSL interpolation (see theme-system.md)
       MealOptionsProvider -- dynamic meal option list
         SeatingDataProvider -- tables, guests, assignments, ASSETS
-          UndoProvider      -- last-assignment undo
+          AssignmentProvider -- assign/drop entry, capacity modal, last-assignment undo
             UIStateProvider   -- selectedTable, selectedAsset (single-selection invariant), zoom/pan
               RoomProvider    -- room outline/border, background image, reference scale (see room-setup.md)
 ```
@@ -25,12 +25,12 @@ TooltipProvider
                     /       |          \
     SeatingDataProvider  RoomProvider  (initial sync load from localStorage)
           |                 |
-  updateSeatingSlice  updateSettingsSlice
+  updateSeatingSlice  updateSettings(fn)
           \                /
            \              /
-         AppDataProvider merges slices
+   projectStore (services/projectStore.ts)
                   |
-        debounced save (300ms)
+  debounced save (300ms) · flush on pagehide/hidden
                   |
         defaultRepository.saveAppData()
                   |
@@ -39,7 +39,7 @@ TooltipProvider
 
 **Loading:** `AppDataProvider` sync-loads from `LocalStorageRepository` on mount. Persistence is synchronous and instant — there is no async/network phase.
 
-**Saving:** When tables/guests change, `SeatingDataProvider` calls `updateSeatingSlice()` to push changes up. When room settings change, `RoomProvider` calls `updateSettingsSlice()`. `AppDataProvider` merges the slices and schedules a single debounced save (300ms) — the ONLY place that writes `AppData` to storage.
+**Saving:** When tables/guests change, `SeatingDataProvider` calls `updateSeatingSlice()` to push changes up. `RoomProvider` holds no copy of settings: it reads them from `AppDataContext` and writes via `updateSettings(fn)`. The project store owned by `AppDataProvider` merges the slices and schedules a single debounced save (300ms), flushed on `pagehide` / tab-hidden — the ONLY place that writes `AppData` to storage. Export/import (`exportJson` / `importJson`) and cross-tab `storage` events go through the same store; reloads bump `dataVersion`.
 
 **Assignments:** Guest assignment moves a guest from `unassignedGuests[]` into `table.guests[]`. Party assignment moves all guests with a matching `party` name at once.
 
@@ -51,7 +51,7 @@ const {
   seatingData,
   addTable,
   updateTable,
-  assignGuestToTable, // SeatingData
+  moveGuests, // SeatingData
   selectedTableId,
   zoomState,
   selectTable, // UIState
@@ -117,7 +117,7 @@ interface AppData {
 - `setEntities()` allows bulk replacement (used by config import / demo-data load)
 - All state changes flow up to `AppDataProvider` via slice updater callbacks
 - Single debounced save (300ms) in `AppDataProvider` -- no competing writes
-- `dataVersion` counter in `AppDataContext` is reserved for a future re-init signal; it stays at 0 in the current build
+- `dataVersion` counter in `AppDataContext` bumps when another tab writes the storage key (`storage` event); `SeatingDataProvider` re-inits from the fresh snapshot
 
 ## Capacity System
 
@@ -127,7 +127,7 @@ Three-tier capacity checking (`src/lib/capacityChecker.ts`):
 2. **EXCEEDS_DEFAULT** -- over default but under `maxChairs`, show confirmation modal
 3. **EXCEEDS_MAXIMUM** -- over `maxChairs`, reject with toast
 
-The capacity modal uses a ref-based promise pattern in `useTableAssignment` (no window globals).
+The capacity modal uses a ref-based promise pattern in `AssignmentProvider` (one modal for the whole app, no window globals).
 
 ## Canvas Coordinate System
 

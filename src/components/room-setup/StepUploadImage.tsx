@@ -51,6 +51,7 @@ export const StepUploadImage = ({ onNext }: StepUploadImageProps) => {
   // Compute aspect warning whenever the preview image loads.
   useEffect(() => {
     if (!hasImage) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clears stale warning when the image is removed
       setAspectWarning(null);
       return;
     }

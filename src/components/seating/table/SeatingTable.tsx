@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import type { Table } from '@/types/seating';
 import { useSeating } from '@/hooks/useSeating';
-import { useDragDropHandler } from '@/hooks/useDragDropHandler';
+import { useTableAssignment } from '@/hooks/useTableAssignment';
 import { useTableDimensions } from '../hooks/useTableDimensions';
 
 import type { CanvasPoint } from '../types';
@@ -35,7 +35,7 @@ const SeatingTableComponent = ({
     setManagementMode,
     pinAllPills,
   } = useSeating();
-  const { handleDrop, handleDragOver } = useDragDropHandler();
+  const { dropOnTable } = useTableAssignment();
 
   const isRound = table.shape === 'round';
   const isSelected = selectedTableId === table.id;
@@ -107,12 +107,14 @@ const SeatingTableComponent = ({
     [selectTable, setManagementMode, table.id],
   );
 
-  const handleTableDrop = useCallback(
-    async (e: React.DragEvent) => {
-      await handleDrop(e, table.id);
-    },
-    [handleDrop, table.id],
-  );
+  const handleTableDrop = (e: React.DragEvent) => {
+    void dropOnTable(e, table.id);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {

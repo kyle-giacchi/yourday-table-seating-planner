@@ -9,7 +9,7 @@ import { StorageBanner } from '@/components/common/StorageBanner';
 import { AppDataProvider } from '@/contexts/AppDataProvider';
 import { ColorThemeProvider } from '@/contexts/ColorThemeProvider';
 import { SeatingDataProvider } from '@/contexts/SeatingDataProvider';
-import { UndoProvider } from '@/contexts/UndoProvider';
+import { AssignmentProvider } from '@/contexts/AssignmentProvider';
 import { UIStateProvider } from '@/contexts/UIStateProvider';
 import { RoomProvider } from '@/contexts/RoomProvider';
 import { MealOptionsProvider } from '@/contexts/MealOptionsProvider';
@@ -72,7 +72,7 @@ const App = () => (
       <ColorThemeProvider>
         <MealOptionsProvider>
           <SeatingDataProvider>
-            <UndoProvider>
+            <AssignmentProvider>
               <UIStateProvider>
                 <RoomProvider>
                   <BrowserRouter>
@@ -80,7 +80,7 @@ const App = () => (
                   </BrowserRouter>
                 </RoomProvider>
               </UIStateProvider>
-            </UndoProvider>
+            </AssignmentProvider>
           </SeatingDataProvider>
         </MealOptionsProvider>
       </ColorThemeProvider>

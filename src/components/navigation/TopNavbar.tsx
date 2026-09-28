@@ -26,7 +26,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useColorTheme } from '@/contexts/ColorThemeContext';
-import { downloadConfiguration, importCompleteConfiguration } from '@/utils/configExportUtils';
+import { downloadConfiguration } from '@/utils/configExportUtils';
+import { useAppData } from '@/contexts/AppDataContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { safeLocalStorage } from '@/lib/safeStorage';
@@ -45,6 +46,7 @@ export const TopNavbar = () => {
   const navigate = useNavigate();
   const { selectedTheme, setSelectedTheme } = useColorTheme();
   const { toast } = useToast();
+  const { exportJson, importJson, discardPending } = useAppData();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleRestart = () => {
@@ -55,6 +57,7 @@ export const TopNavbar = () => {
     ) {
       return;
     }
+    discardPending();
     safeLocalStorage.clear();
     navigate('/');
     window.location.reload();
@@ -62,7 +65,7 @@ export const TopNavbar = () => {
 
   const handleDownload = () => {
     try {
-      downloadConfiguration();
+      downloadConfiguration(exportJson());
       toast({
         title: 'Configuration Downloaded',
         description: 'Your room configuration has been saved successfully.',
@@ -88,7 +91,7 @@ export const TopNavbar = () => {
     reader.onload = (e) => {
       try {
         const jsonString = e.target?.result as string;
-        const result = importCompleteConfiguration(jsonString);
+        const result = importJson(jsonString);
 
         if (result.success) {
           toast({

@@ -21,9 +21,7 @@ vi.mock('@/hooks/useSeating', () => ({
 
 vi.mock('@/hooks/useTableAssignment', () => ({
   useTableAssignment: () => ({
-    assignGuestWithCapacityCheck: vi.fn(),
-    assignPartyWithCapacityCheck: vi.fn(),
-    capacityModal: { isOpen: false, onConfirm: vi.fn(), onCancel: vi.fn() },
+    dropOnTable: vi.fn(),
   }),
 }));
 

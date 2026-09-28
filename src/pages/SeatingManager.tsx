@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { UnifiedAssignmentPanel } from '@/components/common/UnifiedAssignmentPanel';
 import { ManagementModeToggle } from '@/components/common/ManagementModeToggle';
 import { CanvasToolbar } from '@/components/seating/CanvasToolbar';
-import { TableEditor } from '@/components/seating/TableEditor';
+import { TableEditor } from '@/components/seating/table-editor/TableEditor';
 import { SeatingCanvas } from '@/components/seating';
 import { CoachMarkBanner } from '@/components/seating/CoachMarkBanner';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';

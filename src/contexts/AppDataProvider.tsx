@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { defaultRepository, STORAGE_KEY } from '@/services/DataRepository';
-import type { AppData, AppSettings } from '@/types/appData';
+import { useState, useCallback, useMemo, useEffect, useSyncExternalStore } from 'react';
+import { STORAGE_KEY } from '@/services/DataRepository';
+import { createProjectStore } from '@/services/projectStore';
+import type { AppSettings } from '@/types/appData';
 import type { Table, Guest, RoomAsset } from '@/types/seating';
 import { AppDataContext, type AppDataContextType } from './AppDataContext';
 
@@ -10,49 +11,47 @@ interface AppDataProviderProps {
 }
 
 export const AppDataProvider = ({ children }: AppDataProviderProps) => {
-  const [appData, setAppData] = useState<AppData>(() => defaultRepository.loadAppData());
-  const [dataVersion, setDataVersion] = useState(0);
-  const hasPendingChange = useRef(false);
+  const [store] = useState(() => createProjectStore());
+  const { data: appData, reloads: dataVersion } = useSyncExternalStore(
+    store.subscribe,
+    store.getSnapshot,
+  );
 
-  const updateSeatingSlice = useCallback((tables: Table[], guests: Guest[]) => {
-    setAppData((prev) => ({ ...prev, tables, guests }));
-    hasPendingChange.current = true;
-  }, []);
-
-  const updateAssetsSlice = useCallback((assets: RoomAsset[]) => {
-    setAppData((prev) => ({ ...prev, assets }));
-    hasPendingChange.current = true;
-  }, []);
-
-  const updateSettingsSlice = useCallback((settings: AppSettings) => {
-    setAppData((prev) => ({ ...prev, settings }));
-    hasPendingChange.current = true;
-  }, []);
-
-  // Debounced persistence to localStorage.
+  // Cross-tab writes reload memory (bumping dataVersion so SeatingDataProvider
+  // re-inits). Hiding/closing the tab flushes the debounced save.
   useEffect(() => {
-    if (!hasPendingChange.current) return;
-    const timer = setTimeout(() => {
-      defaultRepository.saveAppData(appData);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [appData]);
-
-  // Reload from localStorage when another tab writes to the same key. Bumps
-  // dataVersion so SeatingDataProvider re-inits from the fresh snapshot.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
     const onStorage = (e: StorageEvent) => {
-      if (e.key !== STORAGE_KEY) return;
-      if (e.newValue === null) return;
-      const fresh = defaultRepository.loadAppData();
-      setAppData(fresh);
-      hasPendingChange.current = false;
-      setDataVersion((v) => v + 1);
+      if (e.key === STORAGE_KEY && e.newValue !== null) store.reload();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') store.flush();
     };
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
+    window.addEventListener('pagehide', store.flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('pagehide', store.flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+      store.flush();
+    };
+  }, [store]);
+
+  const updateSeatingSlice = useCallback(
+    (tables: Table[], guests: Guest[]) => store.update((d) => ({ ...d, tables, guests })),
+    [store],
+  );
+
+  const updateAssetsSlice = useCallback(
+    (assets: RoomAsset[]) => store.update((d) => ({ ...d, assets })),
+    [store],
+  );
+
+  const updateSettings = useCallback(
+    (fn: (settings: AppSettings) => AppSettings) =>
+      store.update((d) => ({ ...d, settings: fn(d.settings) })),
+    [store],
+  );
 
   const [initialTables] = useState(() => appData.tables);
   const [initialGuests] = useState(() => appData.guests);
@@ -71,7 +70,10 @@ export const AppDataProvider = ({ children }: AppDataProviderProps) => {
       dataVersion,
       updateSeatingSlice,
       updateAssetsSlice,
-      updateSettingsSlice,
+      updateSettings,
+      exportJson: store.exportJson,
+      importJson: store.importJson,
+      discardPending: store.discard,
     }),
     [
       initialTables,
@@ -85,7 +87,8 @@ export const AppDataProvider = ({ children }: AppDataProviderProps) => {
       dataVersion,
       updateSeatingSlice,
       updateAssetsSlice,
-      updateSettingsSlice,
+      updateSettings,
+      store,
     ],
   );
 

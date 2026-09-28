@@ -9,7 +9,13 @@ import { safeLocalStorage } from '@/lib/safeStorage';
 import type { AppData, ColorTheme } from '@/types/appData';
 import type { Guest, Table } from '@/types/seating';
 import { CURRENT_VERSION, migrateData } from '@/utils/migrations';
-import { ConfigImportSchema, GuestSchema, TableSchema, RoomAssetSchema } from '@/schemas/appData';
+import {
+  ConfigImportSchema,
+  GuestSchema,
+  TableSchema,
+  RoomAssetSchema,
+  type ParsedConfigImport,
+} from '@/schemas/appData';
 import { APP_DATA_KEY, COLOR_THEME_KEY, MEAL_OPTIONS_KEY } from '@/lib/storageKeys';
 
 // Re-export MealOptionItem so contexts can import it from here
@@ -261,6 +267,20 @@ const validateAppDataSlices = (data: AppData): AppData => {
   return result;
 };
 
+type ImportedGuest = ParsedConfigImport['guests'][number];
+
+/** Sanitize user-controlled strings so XSS payloads in exported JSON can't round-trip back in. */
+const sanitizeImportedGuest = <G extends ImportedGuest>(g: G): G => ({
+  ...g,
+  ...sanitizeGuestData({
+    firstName: g.firstName,
+    lastName: g.lastName,
+    fullName: g.fullName,
+    party: g.party,
+    mealSelection: g.mealSelection,
+  }),
+});
+
 // --- localStorage Implementation ---
 
 export class LocalStorageRepository implements DataRepository {
@@ -434,7 +454,13 @@ export class LocalStorageRepository implements DataRepository {
         return { success: false, error: 'Failed to parse configuration file' };
       }
 
-      const parsed = ConfigImportSchema.safeParse(raw);
+      // Migrate before the schema check — older exports lack fields the current schema requires.
+      const migrated = migrateData(raw);
+      if (!migrated) {
+        return { success: false, error: 'Unsupported configuration file version' };
+      }
+
+      const parsed = ConfigImportSchema.safeParse(migrated);
       if (!parsed.success) {
         const first = parsed.error.issues[0];
         const path = first?.path.join('.') || 'root';
@@ -459,47 +485,13 @@ export class LocalStorageRepository implements DataRepository {
 
       // Sanitize user-controlled strings on every guest/table in the import
       // so XSS payloads in exported JSON can't round-trip back into the app.
-      const sanitizedGuests = (appData.guests ?? []).map((g) => {
-        const cleaned = sanitizeGuestData({
-          firstName: g.firstName,
-          lastName: g.lastName,
-          fullName: g.fullName,
-          party: g.party,
-          mealSelection: g.mealSelection,
-        });
-        return {
-          ...g,
-          firstName: cleaned.firstName ?? g.firstName,
-          lastName: cleaned.lastName ?? g.lastName,
-          fullName: cleaned.fullName ?? g.fullName,
-          party: cleaned.party ?? g.party,
-          mealSelection: cleaned.mealSelection ?? g.mealSelection,
-        };
-      });
-      const sanitizedTables = (appData.tables ?? []).map((t) => ({
-        ...t,
-        guests: (t.guests ?? []).map((g) => {
-          const cleaned = sanitizeGuestData({
-            firstName: g.firstName,
-            lastName: g.lastName,
-            fullName: g.fullName,
-            party: g.party,
-            mealSelection: g.mealSelection,
-          });
-          return {
-            ...g,
-            firstName: cleaned.firstName ?? g.firstName,
-            lastName: cleaned.lastName ?? g.lastName,
-            fullName: cleaned.fullName ?? g.fullName,
-            party: cleaned.party ?? g.party,
-            mealSelection: cleaned.mealSelection ?? g.mealSelection,
-          };
-        }),
-      }));
       const cleanedAppData = {
         ...appData,
-        guests: sanitizedGuests,
-        tables: sanitizedTables,
+        guests: (appData.guests ?? []).map(sanitizeImportedGuest),
+        tables: (appData.tables ?? []).map((t) => ({
+          ...t,
+          guests: (t.guests ?? []).map(sanitizeImportedGuest),
+        })),
       };
 
       this.saveAppData(cleanedAppData as AppData);

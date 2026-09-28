@@ -5,7 +5,7 @@ import { AppDataProvider } from '@/contexts/AppDataProvider';
 import { ColorThemeProvider } from '@/contexts/ColorThemeProvider';
 import { MealOptionsProvider } from '@/contexts/MealOptionsProvider';
 import { SeatingDataProvider } from '@/contexts/SeatingDataProvider';
-import { UndoProvider } from '@/contexts/UndoProvider';
+import { AssignmentProvider } from '@/contexts/AssignmentProvider';
 import { UIStateProvider } from '@/contexts/UIStateProvider';
 import { RoomProvider } from '@/contexts/RoomProvider';
 
@@ -50,11 +50,11 @@ export const TestProviders = ({ children }: { children: React.ReactNode }) => (
       <ColorThemeProvider>
         <MealOptionsProvider>
           <SeatingDataProvider>
-            <UndoProvider>
+            <AssignmentProvider>
               <UIStateProvider>
                 <RoomProvider>{children}</RoomProvider>
               </UIStateProvider>
-            </UndoProvider>
+            </AssignmentProvider>
           </SeatingDataProvider>
         </MealOptionsProvider>
       </ColorThemeProvider>

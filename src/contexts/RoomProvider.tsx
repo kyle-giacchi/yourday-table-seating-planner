@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { useRoomOperations } from '@/hooks/useRoomOperations';
 import { useAppData } from '@/contexts/AppDataContext';
 import { useUIState } from '@/contexts/UIStateContext';
-import type { AppData } from '@/types/appData';
 import { RoomContext } from './RoomContext';
 
 interface RoomProviderProps {
@@ -11,38 +10,17 @@ interface RoomProviderProps {
 }
 
 export const RoomProvider = ({ children }: RoomProviderProps) => {
-  const { settings: initialSettings, updateSettingsSlice, version } = useAppData();
+  const { settings, updateSettings } = useAppData();
   // C2 fix: Read canvas dimensions from UIStateContext instead of duplicating state.
   const { canvasDimensions } = useUIState();
 
-  // RoomProvider keeps a local AppData-shaped object so useRoomOperations
-  // (which expects AppData + setAppData) keeps working unchanged.
-  const [appData, setAppData] = useState<AppData>(() => ({
-    version,
-    lastModified: Date.now(),
-    tables: [],
-    guests: [],
-    assets: [],
-    settings: initialSettings,
-  }));
-
-  const roomOperations = useRoomOperations(appData, setAppData, canvasDimensions);
-
-  // Push settings changes up to AppDataProvider; skip the initial render.
-  const isFirstRender = useRef(true);
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    updateSettingsSlice(appData.settings);
-  }, [appData.settings, updateSettingsSlice]);
+  const roomOperations = useRoomOperations(settings, updateSettings, canvasDimensions);
 
   const contextValue = useMemo(
     () => ({
-      backgroundImageState: appData.settings.backgroundImage,
-      roomOutlineState: appData.settings.roomOutline,
-      isReferenceLocked: appData.settings.isReferenceLocked,
+      backgroundImageState: settings.backgroundImage,
+      roomOutlineState: settings.roomOutline,
+      isReferenceLocked: settings.isReferenceLocked,
       setBackgroundImage: roomOperations.setBackgroundImage,
       setImageOpacity: roomOperations.setImageOpacity,
       updateRoomOutline: roomOperations.updateRoomOutline,
@@ -52,9 +30,9 @@ export const RoomProvider = ({ children }: RoomProviderProps) => {
       getTableScale: roomOperations.getTableScale,
     }),
     [
-      appData.settings.backgroundImage,
-      appData.settings.roomOutline,
-      appData.settings.isReferenceLocked,
+      settings.backgroundImage,
+      settings.roomOutline,
+      settings.isReferenceLocked,
       roomOperations.setBackgroundImage,
       roomOperations.setImageOpacity,
       roomOperations.updateRoomOutline,
