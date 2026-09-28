@@ -107,12 +107,14 @@ const useScaleInputs = (
 
   useEffect(() => {
     if (initialWidth > 0 && String(initialWidth) !== widthInput) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-way sync from external prop into editable input
       setWidthInput(String(initialWidth));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally one-way external sync
   }, [initialWidth]);
   useEffect(() => {
     if (initialHeight > 0 && String(initialHeight) !== heightInput) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-way sync from external prop into editable input
       setHeightInput(String(initialHeight));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally one-way external sync

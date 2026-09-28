@@ -1,8 +1,6 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { useSeating } from '@/hooks/useSeating';
-import { useTableAssignment } from '@/hooks/useTableAssignment';
 import { useCanvasDimensionsObserver } from '@/hooks/useCanvasDimensionsObserver';
-import { CapacityModal } from '@/components/common/CapacityModal';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import type { Table } from '@/types/seating';
 
@@ -175,8 +173,6 @@ export const SeatingCanvas = () => {
     clearSelection,
   } = useSeating();
 
-  const { capacityModal } = useTableAssignment();
-
   const {
     transformStyle,
     screenToCanvas,
@@ -237,19 +233,6 @@ export const SeatingCanvas = () => {
           />
         </div>
       </div>
-
-      {capacityModal.data && (
-        <CapacityModal
-          isOpen={capacityModal.isOpen}
-          onClose={capacityModal.onCancel}
-          onConfirm={capacityModal.onConfirm}
-          tableName={capacityModal.data.tableName}
-          currentCount={capacityModal.data.currentCount}
-          newCount={capacityModal.data.newCount}
-          defaultCapacity={capacityModal.data.defaultCapacity}
-          maxCapacity={capacityModal.data.maxCapacity}
-        />
-      )}
     </>
   );
 };

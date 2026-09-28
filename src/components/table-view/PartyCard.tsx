@@ -20,14 +20,14 @@ interface PartyCardProps {
 export const PartyCard = ({ party, onDragStart }: PartyCardProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const { setIsDraggingGuest, seatingData } = useSeating();
-  const { assignPartyWithCapacityCheck } = useTableAssignment();
+  const { assign } = useTableAssignment();
 
   useEffect(() => {
     return () => setIsDraggingGuest(false);
   }, [setIsDraggingGuest]);
 
   const handleAssignToTable = async (tableId: string) => {
-    await assignPartyWithCapacityCheck(party.name, tableId);
+    await assign({ type: 'party', partyName: party.name }, tableId);
   };
 
   const getCardStyling = () => {

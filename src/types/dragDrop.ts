@@ -9,11 +9,6 @@ export interface DragData {
   sourceTableId?: string;
 }
 
-export interface DropHandlerOptions {
-  onSuccess?: (type: 'guest' | 'party', id: string) => void;
-  onError?: (error: string) => void;
-}
-
 const parseGuestPayload = (data: Record<string, unknown>): DragData | null => {
   if (typeof data.guestId !== 'string' || data.guestId.length === 0) return null;
   const result: DragData = { type: 'guest', guestId: data.guestId };

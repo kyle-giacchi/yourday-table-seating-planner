@@ -14,7 +14,7 @@ TooltipProvider
     ColorThemeProvider
       MealOptionsProvider
         SeatingDataProvider  — tables, guests, ASSETS (slice updaters push up)
-          UndoProvider
+          AssignmentProvider — the one capacity-confirm modal + last-assignment undo
             UIStateProvider  — selection, zoom/pan (single-selection invariant)
               RoomProvider   — outline, border, reference scale (slice updater)
 ```
@@ -39,9 +39,9 @@ TooltipProvider
 
 Two systems live side by side on the seating canvas:
 
-| Data | Coordinate system |
-|---|---|
-| `table.x`, `table.y`, `asset.x`, `asset.y` | canvas-space **pixels** |
+| Data                                           | Coordinate system             |
+| ---------------------------------------------- | ----------------------------- |
+| `table.x`, `table.y`, `asset.x`, `asset.y`     | canvas-space **pixels**       |
 | `roomOutline.x/y/width/height`, `roomBorder.*` | **percent** of canvas (0–100) |
 
 Mouse events go through `screenToCanvas(clientX, clientY, canvasRect)` in `src/components/seating/utils/coordinates.ts` — always use it instead of computing offsets off a layer wrapper.
@@ -60,9 +60,11 @@ Layer wrappers are `pointer-events-none`; interactive children re-enable with `p
 
 ## 5. Single-write-path persistence
 
-`AppDataProvider` is the **only** writer to localStorage for `AppData`. Slice providers (`SeatingDataProvider`, `RoomProvider`) push updates via `updateSeatingSlice` / `updateAssetsSlice` / `updateSettingsSlice`. A 300 ms debounce coalesces writes.
+The project store (`src/services/projectStore.ts`, owned by `AppDataProvider`) is the **only** writer to localStorage for `AppData`. `SeatingDataProvider` pushes via `updateSeatingSlice` / `updateAssetsSlice`; `RoomProvider` reads `settings` straight from the store and writes via `updateSettings(fn)`. A 300 ms debounce coalesces writes; `pagehide` / tab-hidden flushes it.
 
-**Closing the tab within the debounce window loses the most recent change.** If a feature needs write durability (e.g. a one-shot action the user won't repeat), call a flush or accept the loss.
+- Export and import go through `useAppData().exportJson()` / `importJson()`: both flush first, and a successful import reloads memory so a stale pending save can't overwrite it.
+- Anything that wipes localStorage wholesale must call `discardPending()` first, or the unload flush writes the old project back.
+- Never call `defaultRepository.saveAppData` / `importConfiguration` from components.
 
 → [architecture.md](architecture.md) §Data Flow · `src/contexts/AppDataProvider.tsx`
 
@@ -89,26 +91,28 @@ Only objects hit `validateStorageData`. Break this and coach-mark / first-run fl
 
 Parties group on a normalized key. **Never compare `guest.party` with `===` directly** — use `samePartyName(a, b)` / `partyKey(name)` from `src/utils/partyUtils.ts`. Raw equality treats `"Smith Family"` and `"smith family"` as different parties and splits them across the UI.
 
-All downstream party utilities (`getPartyAssignmentStatus`, `getEnhancedPartiesFromGuests`) already route through `samePartyName`. Keep it that way.
+All downstream party utilities (`getPartyAssignmentStatus`, `getEnhancedPartiesFromGuests`) already route through `samePartyName`. Assign / unassign / reorder / drop-preview transitions live in the pure `src/utils/seatingModel.ts`; `addGuest` and `updateGuest` canonicalize `party` to the casing already in use via `canonicalPartyName`. Add new party logic there, not in components.
 
-→ `src/utils/partyUtils.ts`
+→ `src/utils/partyUtils.ts` · `src/utils/seatingModel.ts`
 
 ## 9. Drag-and-drop data contract
 
 Drag payloads go through a typed `DragData` union in `src/types/dragDrop.ts`:
 
 ```typescript
-{ kind: 'guest', guestId, sourceTableId?, partyName? }
-{ kind: 'party', partyName, size, sourceTableId? }
+{ type: 'guest', guestId, sourceTableId?, partyName? }
+{ type: 'party', partyName, partySize?, sourceTableId? }
 ```
 
-Always start drags via the helpers in `src/utils/dragUtils.ts` (`startGuestDrag`, `startPartyDrag`). Never set `dataTransfer.setData` directly — it skips the `text/plain` fallback consumed by some drop targets, and the drop handler can't validate the payload.
+Always start drags via the helpers in `src/utils/dragUtils.ts` (`startGuestDrag`, `startPartyDrag`). Never set `dataTransfer.setData` directly — the drop handler reads only `application/json` and can't validate an ad-hoc payload. (`text/plain` is still set, for browsers that refuse a drag without it; nothing reads it.)
 
 `parseDragData(jsonString)` returns the typed value or `null`; handlers should check for `null` before using it.
 
+Every drop onto a table and every "assign to table" menu goes through `useTableAssignment()` — `dropOnTable(e, tableId)` or `assign(data, tableId)` — backed by `AssignmentProvider`. It owns capacity rules, the single `CapacityModal`, the success toast and undo. Don't render a second `CapacityModal` or call `moveGuests` directly for a user-initiated assign.
+
 ## 10. Demo data replaces state
 
-`loadDemoData()` in `SeatingDataContext` **overwrites** tables, guests, and assets with the `DEMO_*` fixtures in `DataRepository.ts`. There is no confirmation, no undo, no merge. Only call it from the homepage's "Try it with Demo Data" entry point — wiring it to any other button will silently wipe real projects.
+`loadDemoData()` in `SeatingDataContext` **overwrites** tables and guests with the `DEMO_*` fixtures in `DataRepository.ts`. Assets are **not** reset — they survive the load. There is no confirmation, no undo, no merge. Only call it from the homepage's "Try it with Demo Data" entry point — wiring it to any other button will silently wipe real projects.
 
 ## 11. Guest import is pure
 

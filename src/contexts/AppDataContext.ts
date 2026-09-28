@@ -19,7 +19,7 @@ export interface AppDataContextType {
   settings: AppSettings;
   /** Full AppData version string */
   version: string;
-  /** Reserved for a future re-init signal; currently always 0 in the client-only build. */
+  /** Bumps when memory is replaced from storage (cross-tab write, import); SeatingDataProvider re-inits on it. */
   dataVersion: number;
 
   /**
@@ -34,11 +34,17 @@ export interface AppDataContextType {
    */
   updateAssetsSlice: (assets: RoomAsset[]) => void;
 
-  /**
-   * Called by RoomProvider whenever settings change.
-   * AppDataProvider merges the slice and schedules a debounced save.
-   */
-  updateSettingsSlice: (settings: AppSettings) => void;
+  /** Called by RoomProvider to change settings; schedules a debounced save. */
+  updateSettings: (fn: (settings: AppSettings) => AppSettings) => void;
+
+  /** Flushes pending edits, then serializes the whole project (plus color theme). */
+  exportJson: () => string;
+
+  /** Flushes pending edits, imports, and on success reloads memory from storage. */
+  importJson: (json: string) => { success: boolean; error?: string };
+
+  /** Drops the pending save. Call before wiping localStorage wholesale. */
+  discardPending: () => void;
 }
 
 export const AppDataContext = createContext<AppDataContextType | undefined>(undefined);

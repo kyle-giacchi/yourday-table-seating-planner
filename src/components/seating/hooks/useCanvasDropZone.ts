@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useSeating } from '@/hooks/useSeating';
-import { useDragDropHandler } from '@/hooks/useDragDropHandler';
-import type { DropHandlerOptions } from '@/types/dragDrop';
+import { useTableAssignment } from '@/hooks/useTableAssignment';
 import type { Table } from '@/types/seating';
 import type { CanvasPoint } from '../types';
 import { findClosestTable } from '../utils/coordinates';
@@ -14,8 +13,6 @@ interface UseCanvasDropZoneOptions {
   screenToCanvas: (screenX: number, screenY: number, canvasRect: DOMRect) => CanvasPoint;
   /** Supply an explicit table list; falls back to `seatingData.tables` when omitted. */
   tables?: Table[];
-  /** Forwarded to `useDragDropHandler`. */
-  dropHandlerOptions?: DropHandlerOptions;
 }
 
 /**
@@ -23,9 +20,8 @@ interface UseCanvasDropZoneOptions {
  *
  * Handles canvas-level drag-and-drop. When the user drops a
  * guest or party anywhere on the canvas, this hook finds the nearest table
- * (within `MAX_DROP_DISTANCE` canvas pixels) and delegates the actual
- * assignment to the existing `useDragDropHandler` hook so all capacity checks
- * and toast notifications continue to work unchanged.
+ * (within `MAX_DROP_DISTANCE` canvas pixels) and hands the drop to the shared
+ * assignment module (`useTableAssignment`), which owns capacity checks and toasts.
  *
  * It also tracks the ID of the "highlighted" table — the closest valid drop
  * target during an active drag — so the canvas renderer can show visual
@@ -34,11 +30,9 @@ interface UseCanvasDropZoneOptions {
 export function useCanvasDropZone({
   screenToCanvas,
   tables: tablesProp,
-  dropHandlerOptions,
 }: UseCanvasDropZoneOptions) {
   const { seatingData } = useSeating();
-  const { handleDrop: delegateDrop, handleDragOver: delegateDragOver } =
-    useDragDropHandler(dropHandlerOptions);
+  const { dropOnTable } = useTableAssignment();
 
   const [highlightedTableId, setHighlightedTableId] = useState<string | null>(null);
 
@@ -70,18 +64,18 @@ export function useCanvasDropZone({
    */
   const handleDragOver = useCallback(
     (e: React.DragEvent) => {
-      delegateDragOver(e);
+      e.preventDefault();
 
       const closest = resolveDropTarget(e);
       setHighlightedTableId(closest ? closest.id : null);
     },
-    [delegateDragOver, resolveDropTarget],
+    [resolveDropTarget],
   );
 
   /**
    * handleDrop
    *
-   * Finds the closest table and forwards the drop to `useDragDropHandler`.
+   * Finds the closest table and forwards the drop to `dropOnTable`.
    * Clears the highlight regardless of success or failure.
    */
   const handleDrop = useCallback(
@@ -92,9 +86,9 @@ export function useCanvasDropZone({
       const target = resolveDropTarget(e);
       if (!target) return false;
 
-      return delegateDrop(e, target.id);
+      return dropOnTable(e, target.id);
     },
-    [resolveDropTarget, delegateDrop],
+    [resolveDropTarget, dropOnTable],
   );
 
   /**

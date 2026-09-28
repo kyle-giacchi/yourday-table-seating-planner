@@ -109,15 +109,15 @@ See [docs/architecture.md](docs/architecture.md) for the full data flow, context
 
 ## Documentation
 
-| Document                                 | Contents                                                |
-| ---------------------------------------- | ------------------------------------------------------- |
-| [Invariants](docs/invariants.md)         | Non-obvious brittle integration points — read first     |
-| [Architecture](docs/architecture.md)     | Context hierarchy, data flow, state management          |
-| [Components](docs/components.md)         | Component catalog and file paths                        |
-| [Styling Guide](docs/styling-guide.md)   | Color tokens, typography, design conventions            |
-| [Seating Canvas](docs/seating-canvas.md) | Canvas layering rules                                   |
-| [Room Assets](docs/room-assets.md)       | Room assets feature internals                           |
-| [Theme System](docs/theme-system.md)     | Color theme pipeline                                    |
+| Document                                 | Contents                                            |
+| ---------------------------------------- | --------------------------------------------------- |
+| [Invariants](docs/invariants.md)         | Non-obvious brittle integration points — read first |
+| [Architecture](docs/architecture.md)     | Context hierarchy, data flow, state management      |
+| [Components](docs/components.md)         | Component catalog and file paths                    |
+| [Styling Guide](docs/styling-guide.md)   | Color tokens, typography, design conventions        |
+| [Seating Canvas](docs/seating-canvas.md) | Canvas layering rules                               |
+| [Room Assets](docs/room-assets.md)       | Room assets feature internals                       |
+| [Theme System](docs/theme-system.md)     | Color theme pipeline                                |
 
 For project context aimed at AI coding agents, see [CLAUDE.md](CLAUDE.md).
 

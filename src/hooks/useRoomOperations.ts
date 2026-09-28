@@ -1,22 +1,21 @@
-import type { Dispatch, SetStateAction } from 'react';
 import { useCallback } from 'react';
 import type { RoomOutlineState } from '@/types/room';
 import { calculateReferenceScale, migrateToPercentageCoordinates } from '@/utils/roomUtils';
-import type { AppData } from '@/types/appData';
+import type { AppSettings } from '@/types/appData';
 
 export const useRoomOperations = (
-  appData: AppData,
-  setAppData: Dispatch<SetStateAction<AppData>>,
+  settings: AppSettings,
+  updateSettings: (fn: (settings: AppSettings) => AppSettings) => void,
   canvasDimensions: { width: number; height: number },
 ) => {
   const getReferenceScale = useCallback(
-    () => calculateReferenceScale(appData.settings.roomOutline, canvasDimensions),
-    [appData.settings.roomOutline, canvasDimensions],
+    () => calculateReferenceScale(settings.roomOutline, canvasDimensions),
+    [settings.roomOutline, canvasDimensions],
   );
 
   const getTableScale = useCallback(() => {
     try {
-      if (!appData.settings.isReferenceLocked) {
+      if (!settings.isReferenceLocked) {
         return 1; // Default scale when no reference is locked
       }
 
@@ -28,32 +27,26 @@ export const useRoomOperations = (
       console.error('Error calculating table scale:', error);
       return 1;
     }
-  }, [getReferenceScale, appData.settings.isReferenceLocked]);
+  }, [getReferenceScale, settings.isReferenceLocked]);
 
   const setBackgroundImage = useCallback(
     (image: string | null) => {
-      setAppData((prev: AppData) => ({
+      updateSettings((prev) => ({
         ...prev,
-        settings: {
-          ...prev.settings,
-          backgroundImage: { ...prev.settings.backgroundImage, backgroundImage: image },
-        },
+        backgroundImage: { ...prev.backgroundImage, backgroundImage: image },
       }));
     },
-    [setAppData],
+    [updateSettings],
   );
 
   const setImageOpacity = useCallback(
     (opacity: number) => {
-      setAppData((prev: AppData) => ({
+      updateSettings((prev) => ({
         ...prev,
-        settings: {
-          ...prev.settings,
-          backgroundImage: { ...prev.settings.backgroundImage, imageOpacity: opacity },
-        },
+        backgroundImage: { ...prev.backgroundImage, imageOpacity: opacity },
       }));
     },
-    [setAppData],
+    [updateSettings],
   );
 
   const updateRoomOutline = useCallback(
@@ -65,46 +58,31 @@ export const useRoomOperations = (
         updates.width !== undefined ||
         updates.height !== undefined
           ? migrateToPercentageCoordinates(
-              { ...appData.settings.roomOutline, ...updates },
+              { ...settings.roomOutline, ...updates },
               canvasDimensions,
             )
           : updates;
 
-      setAppData((prev: AppData) => ({
+      updateSettings((prev) => ({
         ...prev,
-        settings: {
-          ...prev.settings,
-          roomOutline: { ...prev.settings.roomOutline, ...migratedUpdates },
-        },
+        roomOutline: { ...prev.roomOutline, ...migratedUpdates },
       }));
     },
-    [setAppData, appData.settings.roomOutline, canvasDimensions],
+    [updateSettings, settings.roomOutline, canvasDimensions],
   );
 
   const lockReference = useCallback(() => {
-    if (appData.settings.roomOutline.realWorldWidth <= 0) {
+    if (settings.roomOutline.realWorldWidth <= 0) {
       console.error('Invalid reference dimensions');
       return;
     }
 
-    setAppData((prev: AppData) => ({
-      ...prev,
-      settings: {
-        ...prev.settings,
-        isReferenceLocked: true,
-      },
-    }));
-  }, [appData.settings.roomOutline, setAppData]);
+    updateSettings((prev) => ({ ...prev, isReferenceLocked: true }));
+  }, [settings.roomOutline, updateSettings]);
 
   const unlockReference = useCallback(() => {
-    setAppData((prev: AppData) => ({
-      ...prev,
-      settings: {
-        ...prev.settings,
-        isReferenceLocked: false,
-      },
-    }));
-  }, [setAppData]);
+    updateSettings((prev) => ({ ...prev, isReferenceLocked: false }));
+  }, [updateSettings]);
 
   return {
     getReferenceScale,

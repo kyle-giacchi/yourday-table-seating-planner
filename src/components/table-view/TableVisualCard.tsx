@@ -5,8 +5,7 @@ import { useSeating } from '@/hooks/useSeating';
 import { getPartyColor } from '@/utils/partyColor';
 import { startGuestDrag } from '@/utils/dragUtils';
 import { parseDragData } from '@/types/dragDrop';
-import { findSplitPartyName } from '@/utils/tableReorder';
-import { clamp } from '@/lib/utils';
+import { previewPartyBlock } from '@/utils/seatingModel';
 import { CapacityPill } from './CapacityPill';
 import { SplitPartyModal } from '@/components/common/SplitPartyModal';
 
@@ -222,6 +221,15 @@ const cardSurfaceClass = (occupancy: number, recommended: number, max: number): 
   return 'bg-card';
 };
 
+const seatPreview = (
+  table: Table,
+  info: { partyName: string; sourceTableId: string } | null,
+  hoveredSeatIndex: number | null,
+) =>
+  info?.sourceTableId === table.id
+    ? previewPartyBlock(table.guests, info.partyName, hoveredSeatIndex)
+    : null;
+
 interface PendingReorder {
   partyName: string;
   targetIndex: number;
@@ -237,15 +245,7 @@ export const TableVisualCard = ({ table, onDrop, onDragOver }: TableVisualCardPr
   const isOver = dragDepth > 0;
 
   // Landing-zone preview: highlight the range of seats where the moving party will land
-  const draggedFromThisTable = seatDragInfo?.sourceTableId === table.id;
-  const previewRange = (() => {
-    if (!draggedFromThisTable || !seatDragInfo || hoveredSeatIndex === null) return null;
-    const partyBlock = table.guests.filter((g) => g.party === seatDragInfo.partyName);
-    if (partyBlock.length === 0) return null;
-    const others = table.guests.filter((g) => g.party !== seatDragInfo.partyName);
-    const target = Math.max(0, Math.min(hoveredSeatIndex, others.length));
-    return { start: target, end: target + partyBlock.length - 1 };
-  })();
+  const previewRange = seatPreview(table, seatDragInfo, hoveredSeatIndex);
   const previewColor = seatDragInfo ? getPartyColor(seatDragInfo.partyName) : null;
   const isInPreview = (i: number) =>
     previewRange !== null && i >= previewRange.start && i <= previewRange.end;
@@ -282,30 +282,23 @@ export const TableVisualCard = ({ table, onDrop, onDragOver }: TableVisualCardPr
 
   // Parse drag data to detect intra-table reorder vs cross-table/panel assign
   const handleSeatDrop = (e: React.DragEvent, targetIndex: number) => {
-    const jsonString = e.dataTransfer.getData('application/json');
     setHoveredSeatIndex(null);
     setDragDepth(0);
-    if (!jsonString) {
-      onDrop(e, table.id);
-      return;
-    }
-    const data = parseDragData(jsonString);
-    if (!data) return;
-
-    if (data.sourceTableId === table.id && data.partyName) {
-      const partyName = data.partyName;
-      const others = table.guests.filter((g) => g.party !== partyName);
-      const clampedTarget = clamp(targetIndex, 0, others.length);
-      const splitParty = findSplitPartyName(others, clampedTarget);
-      if (splitParty) {
-        setPendingReorder({ partyName, targetIndex: clampedTarget, splitPartyName: splitParty });
-        return;
-      }
-      reorderPartyInTable(table.id, partyName, clampedTarget);
-      return;
-    }
+    const data = parseDragData(e.dataTransfer.getData('application/json'));
+    const partyName = data?.sourceTableId === table.id ? data.partyName : undefined;
     // Cross-table or from-panel drop — defer to card-level assign logic
-    onDrop(e, table.id);
+    if (!partyName) return onDrop(e, table.id);
+
+    const preview = previewPartyBlock(table.guests, partyName, targetIndex);
+    if (preview?.splitPartyName) {
+      setPendingReorder({
+        partyName,
+        targetIndex: preview.target,
+        splitPartyName: preview.splitPartyName,
+      });
+      return;
+    }
+    reorderPartyInTable(table.id, partyName, targetIndex); // clamps; no-op if party absent
   };
 
   return (

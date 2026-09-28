@@ -2,25 +2,15 @@ import { useCallback } from 'react';
 import type { Table, Guest } from '@/types/seating';
 import { getNextTableNumber } from '@/utils/tableNumberUtils';
 import { DEMO_TABLES, DEMO_UNASSIGNED_GUESTS } from '@/services/DataRepository';
-import { partyKey } from '@/utils/partyUtils';
-import { clamp } from '@/lib/utils';
+import {
+  canonicalPartyName,
+  moveGuests as moveGuestsInModel,
+  reorderPartyBlock,
+  type SeatingModel,
+} from '@/utils/seatingModel';
+import { samePartyName } from '@/utils/partyUtils';
 import { generateId } from '@/lib/idGenerator';
 import type { EntityRefs, EntityDispatchers } from './types';
-
-/**
- * Return the canonical casing used by any existing guest in the same party
- * (case-insensitively). Falls back to the incoming string unchanged. Keeps
- * `guest.party` consistent so strict-equality filters across the app stay
- * correct without needing case-insensitive compares everywhere.
- */
-const resolvePartyCasing = (incoming: string, guests: Guest[], tables: Table[]): string => {
-  const key = partyKey(incoming);
-  if (!key) return incoming;
-  const match =
-    guests.find((g) => partyKey(g.party) === key) ??
-    tables.flatMap((t) => t.guests).find((g) => partyKey(g.party) === key);
-  return match?.party ?? incoming;
-};
 
 const buildNewTable = (
   input: Omit<Table, 'id' | 'name' | 'tableNumber'>,
@@ -74,8 +64,11 @@ const useGuestMutations = (refs: EntityRefs, dispatch: EntityDispatchers) => {
   const addGuest = useCallback(
     (guest: Omit<Guest, 'id'> | Guest) => {
       const base: Guest = 'id' in guest ? (guest as Guest) : { ...guest, id: newGuestId() };
-      const canonicalParty = resolvePartyCasing(base.party, guestsRef.current, tablesRef.current);
-      addGuestEntity({ ...base, party: canonicalParty });
+      const party = canonicalPartyName(base.party, {
+        tables: tablesRef.current,
+        unassignedGuests: guestsRef.current,
+      });
+      addGuestEntity({ ...base, party });
     },
     [addGuestEntity, guestsRef, tablesRef],
   );
@@ -96,7 +89,18 @@ const useGuestMutations = (refs: EntityRefs, dispatch: EntityDispatchers) => {
   );
 
   const updateGuest = useCallback(
-    (id: string, updates: Partial<Guest>) => {
+    (id: string, patch: Partial<Guest>) => {
+      // Keep party casing canonical on rename too, not just on add (invariant 8).
+      const updates =
+        patch.party === undefined
+          ? patch
+          : {
+              ...patch,
+              party: canonicalPartyName(patch.party, {
+                tables: tablesRef.current,
+                unassignedGuests: guestsRef.current.filter((g) => g.id !== id),
+              }),
+            };
       if (guestsRef.current.some((g) => g.id === id)) {
         updateGuestEntity(id, updates);
         return;
@@ -129,84 +133,50 @@ const useGuestMutations = (refs: EntityRefs, dispatch: EntityDispatchers) => {
 
 const useAssignmentMutations = (refs: EntityRefs, dispatch: EntityDispatchers) => {
   const { tablesRef, guestsRef } = refs;
-  const { addGuestEntity, removeGuestEntity, updateTableEntity } = dispatch;
+  const { setTableEntities, setGuestEntities, updateTableEntity } = dispatch;
 
-  const assignGuestToTable = useCallback(
-    (guestId: string, tableId: string) => {
-      const guest = guestsRef.current.find((g) => g.id === guestId);
-      if (!guest) return;
-      removeGuestEntity(guestId);
-      updateTableEntity(tableId, (table: Table) => ({
-        ...table,
-        guests: [...table.guests, guest],
-      }));
+  // Every assignment change goes through the pure model; this just applies it.
+  const moveGuests = useCallback(
+    (guestIds: string[], toTableId: string | null) => {
+      const model: SeatingModel = {
+        tables: tablesRef.current,
+        unassignedGuests: guestsRef.current,
+      };
+      const next = moveGuestsInModel(model, guestIds, toTableId);
+      if (next === model) return;
+      setTableEntities(next.tables);
+      setGuestEntities(next.unassignedGuests);
     },
-    [removeGuestEntity, updateTableEntity, guestsRef],
+    [setTableEntities, setGuestEntities, tablesRef, guestsRef],
   );
 
   const removeGuestFromTable = useCallback(
-    (guestId: string) => {
-      const table = tablesRef.current.find((t) => t.guests.some((g) => g.id === guestId));
-      if (!table) return;
-      const guest = table.guests.find((g) => g.id === guestId);
-      if (!guest) return;
-      updateTableEntity(table.id, {
-        guests: table.guests.filter((g) => g.id !== guestId),
-      } as Partial<Table>);
-      addGuestEntity(guest);
-    },
-    [updateTableEntity, addGuestEntity, tablesRef],
-  );
-
-  const assignPartyToTable = useCallback(
-    (partyName: string, tableId: string) => {
-      const partyGuests = guestsRef.current.filter((g) => g.party === partyName);
-      if (partyGuests.length === 0) return;
-      const table = tablesRef.current.find((t) => t.id === tableId);
-      if (!table) return;
-      partyGuests.forEach((g) => removeGuestEntity(g.id));
-      updateTableEntity(tableId, {
-        guests: [...table.guests, ...partyGuests],
-      } as Partial<Table>);
-    },
-    [removeGuestEntity, updateTableEntity, tablesRef, guestsRef],
+    (guestId: string) => moveGuests([guestId], null),
+    [moveGuests],
   );
 
   const removePartyFromTable = useCallback(
     (partyName: string, tableId: string) => {
       const table = tablesRef.current.find((t) => t.id === tableId);
       if (!table) return;
-      const partyGuests = table.guests.filter((g) => g.party === partyName);
-      if (partyGuests.length === 0) return;
-      updateTableEntity(tableId, {
-        guests: table.guests.filter((g) => g.party !== partyName),
-      } as Partial<Table>);
-      partyGuests.forEach((g) => addGuestEntity(g));
+      const ids = table.guests.filter((g) => samePartyName(g.party, partyName)).map((g) => g.id);
+      moveGuests(ids, null);
     },
-    [updateTableEntity, addGuestEntity, tablesRef],
+    [moveGuests, tablesRef],
   );
 
   const reorderPartyInTable = useCallback(
     (tableId: string, partyName: string, targetIndex: number) => {
       const table = tablesRef.current.find((t) => t.id === tableId);
       if (!table) return;
-      const partyBlock = table.guests.filter((g) => g.party === partyName);
-      if (partyBlock.length === 0) return;
-      const others = table.guests.filter((g) => g.party !== partyName);
-      const target = clamp(targetIndex, 0, others.length);
-      const newGuests = [...others.slice(0, target), ...partyBlock, ...others.slice(target)];
-      updateTableEntity(tableId, { guests: newGuests } as Partial<Table>);
+      updateTableEntity(tableId, {
+        guests: reorderPartyBlock(table.guests, partyName, targetIndex),
+      } as Partial<Table>);
     },
     [updateTableEntity, tablesRef],
   );
 
-  return {
-    assignGuestToTable,
-    removeGuestFromTable,
-    assignPartyToTable,
-    removePartyFromTable,
-    reorderPartyInTable,
-  };
+  return { moveGuests, removeGuestFromTable, removePartyFromTable, reorderPartyInTable };
 };
 
 const useDemoDataLoader = (dispatch: EntityDispatchers) => {

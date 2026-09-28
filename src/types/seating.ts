@@ -1,13 +1,5 @@
 export type AllergyFlag =
-  | 'nut'
-  | 'gluten'
-  | 'dairy'
-  | 'shellfish'
-  | 'egg'
-  | 'soy'
-  | 'vegan'
-  | 'kosher'
-  | 'halal';
+  'nut' | 'gluten' | 'dairy' | 'shellfish' | 'egg' | 'soy' | 'vegan' | 'kosher' | 'halal';
 export type RsvpStatus = 'attending' | 'declined' | 'pending';
 
 export interface Guest {

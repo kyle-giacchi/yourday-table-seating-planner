@@ -12,6 +12,7 @@ import { GuestCard } from './GuestCard';
 import { PartyCard } from '../table-view/PartyCard';
 import { startGuestDrag, startPartyDrag } from '@/utils/dragUtils';
 import { parseDragData } from '@/types/dragDrop';
+import { guestsForMove } from '@/utils/seatingModel';
 
 const VIRTUAL_THRESHOLD = 50;
 
@@ -30,13 +31,7 @@ export const UnifiedAssignmentPanel = ({
   showModeToggle = true,
   className = '',
 }: UnifiedAssignmentPanelProps) => {
-  const {
-    seatingData,
-    removeGuestFromTable,
-    removePartyFromTable,
-    isDraggingGuest,
-    isDraggingSeated,
-  } = useSeating();
+  const { seatingData, moveGuests, isDraggingGuest, isDraggingSeated } = useSeating();
   const [assignmentMode, setAssignmentMode] = useState<'party' | 'guest'>(initialMode);
   const [searchTerm, setSearchTerm] = useState('');
   const [dropDepth, setDropDepth] = useState(0);
@@ -121,15 +116,13 @@ export const UnifiedAssignmentPanel = ({
     const data = parseDragData(jsonString);
     if (!data) return;
 
-    if (data.type === 'guest' && data.guestId) {
-      const onTable = seatingData.tables.some((t) => t.guests.some((g) => g.id === data.guestId));
-      if (onTable) removeGuestFromTable(data.guestId);
-    } else if (data.type === 'party' && data.partyName) {
-      const tableWithParty = seatingData.tables.find((t) =>
-        t.guests.some((g) => g.party === data.partyName),
-      );
-      if (tableWithParty) removePartyFromTable(data.partyName, tableWithParty.id);
-    }
+    // A party drag without a source table came from this panel — nothing to unassign.
+    // (moveGuests to null only touches seated guests, so a stray guest drag is a no-op too.)
+    if (data.type === 'party' && !data.sourceTableId) return;
+    moveGuests(
+      guestsForMove(seatingData, data).map((g) => g.id),
+      null,
+    );
   };
 
   const handleDragOver = (e: React.DragEvent) => {

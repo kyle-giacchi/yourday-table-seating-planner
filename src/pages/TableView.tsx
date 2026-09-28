@@ -3,13 +3,11 @@ import { useSeating } from '@/hooks/useSeating';
 import { useTableAssignment } from '@/hooks/useTableAssignment';
 import type { Party } from '@/utils/partyUtils';
 import type { Guest } from '@/types/seating';
-import { parseDragData } from '@/types/dragDrop';
 import { TableCard } from '@/components/table-view/TableCard';
 import { TableVisualCard } from '@/components/table-view/TableVisualCard';
 import type { TableDisplayMode } from '@/components/table-view/DisplayModeToggle';
 import { DisplayModeToggle } from '@/components/table-view/DisplayModeToggle';
 import { UnifiedAssignmentPanel } from '@/components/common/UnifiedAssignmentPanel';
-import { CapacityModal } from '@/components/common/CapacityModal';
 import { AddTableDropdown } from '@/components/seating/AddTableDropdown';
 import { startGuestDrag, startPartyDrag } from '@/utils/dragUtils';
 import { Button } from '@/components/ui/button';
@@ -17,8 +15,7 @@ import { Users } from 'lucide-react';
 
 const TableView = () => {
   const { seatingData, removePartyFromTable } = useSeating();
-  const { assignGuestWithCapacityCheck, assignPartyWithCapacityCheck, capacityModal } =
-    useTableAssignment();
+  const { dropOnTable: handleDrop } = useTableAssignment();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [displayMode, setDisplayMode] = useState<TableDisplayMode>('party');
 
@@ -32,27 +29,6 @@ const TableView = () => {
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-  };
-
-  const handleDrop = async (e: React.DragEvent, tableId: string) => {
-    e.preventDefault();
-    const jsonString = e.dataTransfer.getData('application/json');
-    if (jsonString) {
-      const data = parseDragData(jsonString);
-      if (!data) return;
-
-      if (data.type === 'party' && data.partyName) {
-        await assignPartyWithCapacityCheck(data.partyName, tableId);
-      } else if (data.type === 'guest' && data.guestId) {
-        await assignGuestWithCapacityCheck(data.guestId, tableId);
-      }
-    } else {
-      // Fallback for old drag format (guest ID as text)
-      const guestId = e.dataTransfer.getData('text/plain');
-      if (guestId) {
-        await assignGuestWithCapacityCheck(guestId, tableId);
-      }
-    }
   };
 
   const handleRemovePartyFromTable = (partyName: string, tableId: string) => {
@@ -147,20 +123,6 @@ const TableView = () => {
           </div>
         </div>
       </div>
-
-      {/* Capacity Modal */}
-      {capacityModal.data && (
-        <CapacityModal
-          isOpen={capacityModal.isOpen}
-          onClose={capacityModal.onCancel}
-          onConfirm={capacityModal.onConfirm}
-          tableName={capacityModal.data.tableName}
-          currentCount={capacityModal.data.currentCount}
-          newCount={capacityModal.data.newCount}
-          defaultCapacity={capacityModal.data.defaultCapacity}
-          maxCapacity={capacityModal.data.maxCapacity}
-        />
-      )}
     </>
   );
 };

@@ -19,11 +19,11 @@ interface GuestCardProps {
 
 export const GuestCard = ({ guest, onDragStart }: GuestCardProps) => {
   const { seatingData, setIsDraggingGuest } = useSeating();
-  const { assignGuestWithCapacityCheck } = useTableAssignment();
+  const { assign } = useTableAssignment();
   const [isDragging, setIsDragging] = useState(false);
 
   const handleAssignToTable = async (tableId: string) => {
-    await assignGuestWithCapacityCheck(guest.id, tableId);
+    await assign({ type: 'guest', guestId: guest.id }, tableId);
   };
 
   useEffect(() => {

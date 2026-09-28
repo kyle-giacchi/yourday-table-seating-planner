@@ -146,7 +146,7 @@ describe('SeatingDataContext', () => {
     expect(result.current.seatingData.tables[0].guests).toHaveLength(0);
   });
 
-  it('assignGuestToTable moves guest to table', () => {
+  it('moveGuests moves guest to table', () => {
     const guest = createMockGuest({ id: 'g1' });
     const table = createMockTable({ id: 't1' });
     mockInitialGuests = [guest];
@@ -155,7 +155,7 @@ describe('SeatingDataContext', () => {
     const { result } = renderHook(() => useSeatingData(), { wrapper });
 
     act(() => {
-      result.current.assignGuestToTable('g1', 't1');
+      result.current.moveGuests(['g1'], 't1');
     });
 
     expect(result.current.seatingData.unassignedGuests).toHaveLength(0);
@@ -163,14 +163,14 @@ describe('SeatingDataContext', () => {
     expect(result.current.seatingData.tables[0].guests[0].id).toBe('g1');
   });
 
-  it('assignGuestToTable no-op for non-existent guest', () => {
+  it('moveGuests no-op for non-existent guest', () => {
     const table = createMockTable({ id: 't1' });
     mockInitialTables = [table];
 
     const { result } = renderHook(() => useSeatingData(), { wrapper });
 
     act(() => {
-      result.current.assignGuestToTable('non-existent', 't1');
+      result.current.moveGuests(['non-existent'], 't1');
     });
 
     expect(result.current.seatingData.tables[0].guests).toHaveLength(0);
@@ -192,7 +192,7 @@ describe('SeatingDataContext', () => {
     expect(result.current.seatingData.unassignedGuests[0].id).toBe('g1');
   });
 
-  it('assignPartyToTable moves all matching guests', () => {
+  it('moveGuests moves several guests at once', () => {
     const g1 = createMockGuest({ id: 'p1', party: 'Smiths', fullName: 'A Smith' });
     const g2 = createMockGuest({ id: 'p2', party: 'Smiths', fullName: 'B Smith' });
     const g3 = createMockGuest({ id: 'p3', party: 'Other', fullName: 'C Other' });
@@ -203,7 +203,7 @@ describe('SeatingDataContext', () => {
     const { result } = renderHook(() => useSeatingData(), { wrapper });
 
     act(() => {
-      result.current.assignPartyToTable('Smiths', 't1');
+      result.current.moveGuests(['p1', 'p2'], 't1');
     });
 
     expect(result.current.seatingData.tables[0].guests).toHaveLength(2);
@@ -211,14 +211,14 @@ describe('SeatingDataContext', () => {
     expect(result.current.seatingData.unassignedGuests[0].party).toBe('Other');
   });
 
-  it('assignPartyToTable no-op for empty party', () => {
+  it('moveGuests no-op for empty list', () => {
     const table = createMockTable({ id: 't1' });
     mockInitialTables = [table];
 
     const { result } = renderHook(() => useSeatingData(), { wrapper });
 
     act(() => {
-      result.current.assignPartyToTable('NonExistent', 't1');
+      result.current.moveGuests([], 't1');
     });
 
     expect(result.current.seatingData.tables[0].guests).toHaveLength(0);

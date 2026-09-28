@@ -1,11 +1,8 @@
-import { defaultRepository } from '@/services/DataRepository';
-
 /**
- * Triggers a browser download of the full configuration as a JSON file.
- * Uses DOM APIs (Blob, createElement) so this stays in a utility, not in the repository.
+ * Triggers a browser download of a serialized configuration (from `useAppData().exportJson()`).
+ * Uses DOM APIs (Blob, createElement) so this stays in a utility, not in the store.
  */
-export const downloadConfiguration = (): void => {
-  const configData = defaultRepository.exportConfiguration();
+export const downloadConfiguration = (configData: string): void => {
   const blob = new Blob([configData], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
 
@@ -19,15 +16,4 @@ export const downloadConfiguration = (): void => {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
-};
-
-/**
- * Imports a complete configuration from a JSON string.
- * Thin wrapper kept for backward compatibility with components that don't
- * have direct repository access.
- */
-export const importCompleteConfiguration = (
-  jsonString: string,
-): { success: boolean; error?: string } => {
-  return defaultRepository.importConfiguration(jsonString);
 };

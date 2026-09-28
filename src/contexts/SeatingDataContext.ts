@@ -10,9 +10,9 @@ export interface SeatingDataContextType {
   addGuest: (guest: Omit<Guest, 'id'> | Guest) => void;
   updateGuest: (id: string, updates: Partial<Guest>) => void;
   removeGuest: (id: string) => void;
-  assignGuestToTable: (guestId: string, tableId: string) => void;
+  /** Move guests (from anywhere) onto a table, or to unassigned when `toTableId` is null. */
+  moveGuests: (guestIds: string[], toTableId: string | null) => void;
   removeGuestFromTable: (guestId: string) => void;
-  assignPartyToTable: (partyName: string, tableId: string) => void;
   removePartyFromTable: (partyName: string, tableId: string) => void;
   reorderGuestInTable: (tableId: string, guestId: string, newIndex: number) => void;
   reorderPartyInTable: (tableId: string, partyName: string, targetIndex: number) => void;

@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import type { Table, Guest } from '@/types/seating';
-import { getPartiesFromGuests, getPartyAssignmentStatus } from '@/utils/partyUtils';
+import { getPartiesFromGuests, getPartyAssignmentStatus, samePartyName } from '@/utils/partyUtils';
 import { Split, X } from 'lucide-react';
 import { useSeating } from '@/hooks/useSeating';
 import type { TableDisplayMode } from './DisplayModeToggle';
 import { CapacityPill } from './CapacityPill';
 import { startGuestDrag, startPartyDrag } from '@/utils/dragUtils';
 import { parseDragData } from '@/types/dragDrop';
-import { findSplitPartyName } from '@/utils/tableReorder';
+import { partyInsertIndex, previewPartyBlock } from '@/utils/seatingModel';
 import { getPartyColor } from '@/utils/partyColor';
-import { clamp } from '@/lib/utils';
 import { SplitPartyModal } from '@/components/common/SplitPartyModal';
 
 const EMPTY_GUESTS: Guest[] = [];
@@ -330,7 +329,7 @@ const useReorderHandlers = (args: ReorderHandlerArgs) => {
   };
 
   const handlePartyRowDragOver = (targetPartyName: string, e: React.DragEvent) => {
-    if (!draggedFromThisTable || seatDragInfo?.partyName === targetPartyName) return;
+    if (!draggedFromThisTable || samePartyName(seatDragInfo?.partyName, targetPartyName)) return;
     e.preventDefault();
     e.stopPropagation();
     if (hoveredPartyName !== targetPartyName) setHoveredPartyName(targetPartyName);
@@ -343,7 +342,7 @@ const useReorderHandlers = (args: ReorderHandlerArgs) => {
       data.type !== 'party' ||
       !data.partyName ||
       data.sourceTableId !== table.id ||
-      data.partyName === targetPartyName
+      samePartyName(data.partyName, targetPartyName)
     ) {
       return;
     }
@@ -351,9 +350,10 @@ const useReorderHandlers = (args: ReorderHandlerArgs) => {
     e.stopPropagation();
     setHoveredPartyName(null);
     setDragDepth(0);
-    const others = table.guests.filter((g) => g.party !== data.partyName);
-    const firstIdxOfTarget = others.findIndex((g) => g.party === targetPartyName);
-    tryReorderToIndex(data.partyName, firstIdxOfTarget >= 0 ? firstIdxOfTarget : others.length);
+    tryReorderToIndex(
+      data.partyName,
+      partyInsertIndex(table.guests, data.partyName, targetPartyName),
+    );
   };
 
   const handlePartyListDragOver = (e: React.DragEvent) => {
@@ -369,8 +369,7 @@ const useReorderHandlers = (args: ReorderHandlerArgs) => {
     e.stopPropagation();
     setHoveredPartyName(null);
     setDragDepth(0);
-    const others = table.guests.filter((g) => g.party !== data.partyName);
-    tryReorderToIndex(data.partyName, others.length);
+    tryReorderToIndex(data.partyName, table.guests.length); // clamped to the end
   };
 
   return {
@@ -419,21 +418,10 @@ export const TableCard = ({
   const draggedFromThisTable = seatDragInfo?.sourceTableId === table.id;
 
   // Landing-zone preview for By Guest mode (range of seat rows)
-  const previewRange = (() => {
-    if (
-      displayMode !== 'guest' ||
-      !draggedFromThisTable ||
-      !seatDragInfo ||
-      hoveredSeatIndex === null
-    ) {
-      return null;
-    }
-    const partyBlock = table.guests.filter((g) => g.party === seatDragInfo.partyName);
-    if (partyBlock.length === 0) return null;
-    const others = table.guests.filter((g) => g.party !== seatDragInfo.partyName);
-    const target = Math.max(0, Math.min(hoveredSeatIndex, others.length));
-    return { start: target, end: target + partyBlock.length - 1 };
-  })();
+  const previewRange =
+    displayMode === 'guest' && draggedFromThisTable
+      ? previewPartyBlock(table.guests, seatDragInfo.partyName, hoveredSeatIndex)
+      : null;
   const previewColor = seatDragInfo ? getPartyColor(seatDragInfo.partyName) : null;
 
   const dragClass =
@@ -444,14 +432,17 @@ export const TableCard = ({
         : '';
 
   const tryReorderToIndex = (partyName: string, rawTargetIdx: number) => {
-    const others = table.guests.filter((g) => g.party !== partyName);
-    const clampedTarget = clamp(rawTargetIdx, 0, others.length);
-    const splitParty = findSplitPartyName(others, clampedTarget);
-    if (splitParty) {
-      setPendingReorder({ partyName, targetIndex: clampedTarget, splitPartyName: splitParty });
+    const preview = previewPartyBlock(table.guests, partyName, rawTargetIdx);
+    if (!preview) return;
+    if (preview.splitPartyName) {
+      setPendingReorder({
+        partyName,
+        targetIndex: preview.target,
+        splitPartyName: preview.splitPartyName,
+      });
       return;
     }
-    reorderPartyInTable(table.id, partyName, clampedTarget);
+    reorderPartyInTable(table.id, partyName, preview.target);
   };
 
   const handlers = useReorderHandlers({

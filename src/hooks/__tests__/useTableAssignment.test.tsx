@@ -1,248 +1,193 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, screen, fireEvent } from '@testing-library/react';
+import React from 'react';
+import { SeatingDataProvider } from '@/contexts/SeatingDataProvider';
+import { useSeatingData } from '@/contexts/SeatingDataContext';
+import { AssignmentProvider } from '@/contexts/AssignmentProvider';
 import { useTableAssignment } from '@/hooks/useTableAssignment';
 import { createMockGuest, createMockTable } from '@/test/helpers';
-import type { SeatingData } from '@/types/seating';
+import type { Table, Guest } from '@/types/seating';
 
-const mockAssignGuestToTable = vi.fn();
-const mockAssignPartyToTable = vi.fn();
-const mockRemoveGuestFromTable = vi.fn();
-const mockRemovePartyFromTable = vi.fn();
 const mockToast = vi.fn();
-const mockSetLastAssignment = vi.fn();
+let mockInitialTables: Table[] = [];
+let mockInitialGuests: Guest[] = [];
 
-let mockSeatingData: SeatingData = { tables: [], unassignedGuests: [] };
-
-vi.mock('@/contexts/SeatingDataContext', () => ({
-  useSeatingData: () => ({
-    seatingData: mockSeatingData,
-    assignGuestToTable: mockAssignGuestToTable,
-    assignPartyToTable: mockAssignPartyToTable,
-    removeGuestFromTable: mockRemoveGuestFromTable,
-    removePartyFromTable: mockRemovePartyFromTable,
-  }),
-}));
-
-vi.mock('@/contexts/UndoContext', () => ({
-  useUndo: () => ({
-    lastAssignment: null,
-    setLastAssignment: mockSetLastAssignment,
+vi.mock('@/contexts/AppDataContext', () => ({
+  useAppData: () => ({
+    initialTables: mockInitialTables,
+    initialGuests: mockInitialGuests,
+    initialAssets: [],
+    latestTables: mockInitialTables,
+    latestGuests: mockInitialGuests,
+    latestAssets: [],
+    updateSeatingSlice: vi.fn(),
+    updateAssetsSlice: vi.fn(),
+    dataVersion: 0,
   }),
 }));
 
 vi.mock('@/hooks/use-toast', () => ({
+  toast: (...args: unknown[]) => mockToast(...args),
   useToast: () => ({ toast: mockToast }),
 }));
 
-describe('useTableAssignment', () => {
+const wrapper = ({ children }: { children: React.ReactNode }) => (
+  <SeatingDataProvider>
+    <AssignmentProvider>{children}</AssignmentProvider>
+  </SeatingDataProvider>
+);
+
+const setup = (tables: Table[], guests: Guest[] = []) => {
+  mockInitialTables = tables;
+  mockInitialGuests = guests;
+  return renderHook(() => ({ ...useTableAssignment(), ...useSeatingData() }), { wrapper });
+};
+
+const seated = (n: number, prefix = 's') =>
+  Array.from({ length: n }, (_, i) => createMockGuest({ id: `${prefix}${i}`, party: `P${i}` }));
+
+const tableGuestIds = (r: ReturnType<typeof setup>['result'], i = 0) =>
+  r.current.seatingData.tables[i].guests.map((g) => g.id);
+
+describe('assignment module', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSeatingData = { tables: [], unassignedGuests: [] };
   });
 
-  it('guest within default capacity → auto-assign + success toast', async () => {
-    const table = createMockTable({
-      id: 't1',
-      guests: [createMockGuest(), createMockGuest(), createMockGuest()],
-      defaultChairs: 8,
-      maxChairs: 10,
-    });
-    mockSeatingData = { tables: [table], unassignedGuests: [createMockGuest({ id: 'g-new' })] };
-
-    const { result } = renderHook(() => useTableAssignment());
-
-    let outcome = false;
-    await act(async () => {
-      outcome = await result.current.assignGuestWithCapacityCheck('g-new', 't1');
-    });
-
-    expect(outcome).toBe(true);
-    expect(mockAssignGuestToTable).toHaveBeenCalledWith('g-new', 't1');
-    expect(mockToast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Guest assigned successfully' }),
+  it('guest within default → moves + toast + undo returns them', async () => {
+    const { result } = setup(
+      [createMockTable({ id: 't1', defaultChairs: 8, maxChairs: 10 })],
+      [createMockGuest({ id: 'g1' })],
     );
-  });
 
-  it('guest exceeds default capacity → modal opens', async () => {
-    // 8/8 default, max 10 — adding 1 exceeds default but not max
-    const guests = Array.from({ length: 8 }, (_, i) => createMockGuest({ id: `g${i}` }));
-    const table = createMockTable({ id: 't1', guests, defaultChairs: 8, maxChairs: 10 });
-    mockSeatingData = { tables: [table], unassignedGuests: [createMockGuest({ id: 'g-new' })] };
-
-    const { result } = renderHook(() => useTableAssignment());
-
-    // Don't await — the promise is held open until modal confirm/cancel
-    act(() => {
-      result.current.assignGuestWithCapacityCheck('g-new', 't1');
-    });
-
-    expect(result.current.capacityModal.isOpen).toBe(true);
-    expect(result.current.capacityModal.data?.type).toBe('guest');
-    expect(mockAssignGuestToTable).not.toHaveBeenCalled();
-  });
-
-  it('guest exceeds max capacity → error toast, returns false', async () => {
-    const guests = Array.from({ length: 10 }, (_, i) => createMockGuest({ id: `g${i}` }));
-    const table = createMockTable({ id: 't1', guests, defaultChairs: 8, maxChairs: 10 });
-    mockSeatingData = { tables: [table], unassignedGuests: [] };
-
-    const { result } = renderHook(() => useTableAssignment());
-
-    let outcome = false;
+    let ok = false;
     await act(async () => {
-      outcome = await result.current.assignGuestWithCapacityCheck('g-new', 't1');
+      ok = await result.current.assign({ type: 'guest', guestId: 'g1' }, 't1');
     });
 
-    expect(outcome).toBe(false);
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
-    expect(mockAssignGuestToTable).not.toHaveBeenCalled();
+    expect(ok).toBe(true);
+    expect(tableGuestIds(result)).toEqual(['g1']);
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Guest assigned' }));
+
+    act(() => result.current.undoLastAssignment());
+    expect(tableGuestIds(result)).toEqual([]);
+    expect(result.current.seatingData.unassignedGuests.map((g) => g.id)).toEqual(['g1']);
+    expect(result.current.lastAssignment).toBeNull();
   });
 
-  it('guest on missing table → returns false', async () => {
-    mockSeatingData = { tables: [], unassignedGuests: [] };
-
-    const { result } = renderHook(() => useTableAssignment());
-
-    let outcome = false;
-    await act(async () => {
-      outcome = await result.current.assignGuestWithCapacityCheck('g1', 't-missing');
-    });
-
-    expect(outcome).toBe(false);
-  });
-
-  it('party within capacity → auto-assign + toast', async () => {
-    const table = createMockTable({
-      id: 't1',
-      guests: [createMockGuest(), createMockGuest()],
-      defaultChairs: 8,
-      maxChairs: 10,
-    });
-    const partyGuests = [
-      createMockGuest({ id: 'p1', party: 'Team' }),
-      createMockGuest({ id: 'p2', party: 'Team' }),
-      createMockGuest({ id: 'p3', party: 'Team' }),
-    ];
-    mockSeatingData = { tables: [table], unassignedGuests: partyGuests };
-
-    const { result } = renderHook(() => useTableAssignment());
-
-    let outcome = false;
-    await act(async () => {
-      outcome = await result.current.assignPartyWithCapacityCheck('Team', 't1');
-    });
-
-    expect(outcome).toBe(true);
-    expect(mockAssignPartyToTable).toHaveBeenCalledWith('Team', 't1');
-    expect(mockToast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Party assigned successfully' }),
+  it('exceeds default → one shared modal; confirm assigns', async () => {
+    const { result } = setup(
+      [createMockTable({ id: 't1', guests: seated(8), defaultChairs: 8, maxChairs: 10 })],
+      [createMockGuest({ id: 'g-new' })],
     );
-  });
 
-  it('party exceeds default capacity → modal opens', async () => {
-    // 7/8 default, adding party of 2 → 9/10 — exceeds default, within max
-    const existing = Array.from({ length: 7 }, (_, i) => createMockGuest({ id: `e${i}` }));
-    const table = createMockTable({ id: 't1', guests: existing, defaultChairs: 8, maxChairs: 10 });
-    const partyGuests = [
-      createMockGuest({ id: 'p1', party: 'Pair' }),
-      createMockGuest({ id: 'p2', party: 'Pair' }),
-    ];
-    mockSeatingData = { tables: [table], unassignedGuests: partyGuests };
-
-    const { result } = renderHook(() => useTableAssignment());
-
+    let promise!: Promise<boolean>;
     act(() => {
-      result.current.assignPartyWithCapacityCheck('Pair', 't1');
+      promise = result.current.assign({ type: 'guest', guestId: 'g-new' }, 't1');
+    });
+    expect(tableGuestIds(result)).not.toContain('g-new');
+
+    let ok = false;
+    await act(async () => {
+      fireEvent.click(screen.getByText('Yes, let my guests rub shoulders!'));
+      ok = await promise;
     });
 
-    expect(result.current.capacityModal.isOpen).toBe(true);
-    expect(result.current.capacityModal.data?.type).toBe('party');
-    expect(mockAssignPartyToTable).not.toHaveBeenCalled();
+    expect(ok).toBe(true);
+    expect(tableGuestIds(result)).toContain('g-new');
+    expect(screen.queryByText('Yes, let my guests rub shoulders!')).toBeNull();
   });
 
-  it('party exceeds max capacity → error toast', async () => {
-    // 8/10 guests, party of 3 → 11 > max
-    const existing = Array.from({ length: 8 }, (_, i) => createMockGuest({ id: `e${i}` }));
-    const table = createMockTable({ id: 't1', guests: existing, defaultChairs: 8, maxChairs: 10 });
-    const partyGuests = [
-      createMockGuest({ id: 'p1', party: 'Big' }),
-      createMockGuest({ id: 'p2', party: 'Big' }),
-      createMockGuest({ id: 'p3', party: 'Big' }),
-    ];
-    mockSeatingData = { tables: [table], unassignedGuests: partyGuests };
+  it('exceeds default → cancel resolves false without moving', async () => {
+    const { result } = setup(
+      [createMockTable({ id: 't1', guests: seated(8), defaultChairs: 8, maxChairs: 10 })],
+      [createMockGuest({ id: 'g-new' })],
+    );
 
-    const { result } = renderHook(() => useTableAssignment());
-
-    let outcome = false;
-    await act(async () => {
-      outcome = await result.current.assignPartyWithCapacityCheck('Big', 't1');
+    let promise!: Promise<boolean>;
+    act(() => {
+      promise = result.current.assign({ type: 'guest', guestId: 'g-new' }, 't1');
     });
 
-    expect(outcome).toBe(false);
+    let ok = true;
+    await act(async () => {
+      fireEvent.click(screen.getByText("No, on second thought let's give them some space"));
+      ok = await promise;
+    });
+
+    expect(ok).toBe(false);
+    expect(tableGuestIds(result)).not.toContain('g-new');
+  });
+
+  it('exceeds max → destructive toast, nothing moves', async () => {
+    const { result } = setup(
+      [createMockTable({ id: 't1', guests: seated(10), defaultChairs: 8, maxChairs: 10 })],
+      [createMockGuest({ id: 'g-new' })],
+    );
+
+    let ok = true;
+    await act(async () => {
+      ok = await result.current.assign({ type: 'guest', guestId: 'g-new' }, 't1');
+    });
+
+    expect(ok).toBe(false);
     expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
+    expect(result.current.seatingData.unassignedGuests).toHaveLength(1);
   });
 
-  it('empty party → returns false', async () => {
-    const table = createMockTable({ id: 't1' });
-    mockSeatingData = { tables: [table], unassignedGuests: [] };
+  it('cross-table guest move actually moves, and undo puts them back', async () => {
+    const g = createMockGuest({ id: 'g1' });
+    const { result } = setup([
+      createMockTable({ id: 'a', guests: [g] }),
+      createMockTable({ id: 'b' }),
+    ]);
 
-    const { result } = renderHook(() => useTableAssignment());
-
-    let outcome = false;
+    let ok = false;
     await act(async () => {
-      outcome = await result.current.assignPartyWithCapacityCheck('Nobody', 't1');
+      ok = await result.current.assign({ type: 'guest', guestId: 'g1', sourceTableId: 'a' }, 'b');
     });
 
-    expect(outcome).toBe(false);
+    expect(ok).toBe(true);
+    expect(tableGuestIds(result, 0)).toEqual([]);
+    expect(tableGuestIds(result, 1)).toEqual(['g1']);
+
+    act(() => result.current.undoLastAssignment());
+    expect(tableGuestIds(result, 0)).toEqual(['g1']);
+    expect(tableGuestIds(result, 1)).toEqual([]);
   });
 
-  it('modal confirm → assigns + closes + resolves true', async () => {
-    const guests = Array.from({ length: 8 }, (_, i) => createMockGuest({ id: `g${i}` }));
-    const table = createMockTable({ id: 't1', guests, defaultChairs: 8, maxChairs: 10 });
-    mockSeatingData = { tables: [table], unassignedGuests: [createMockGuest({ id: 'g-new' })] };
+  it('party drag moves every member regardless of name casing', async () => {
+    const { result } = setup(
+      [createMockTable({ id: 't1' })],
+      [
+        createMockGuest({ id: 'p1', party: 'Smith Family' }),
+        createMockGuest({ id: 'p2', party: 'smith family' }),
+        createMockGuest({ id: 'o1', party: 'Other' }),
+      ],
+    );
 
-    const { result } = renderHook(() => useTableAssignment());
-
-    let promise: Promise<boolean>;
-    act(() => {
-      promise = result.current.assignGuestWithCapacityCheck('g-new', 't1');
-    });
-
-    expect(result.current.capacityModal.isOpen).toBe(true);
-
-    let outcome = false;
     await act(async () => {
-      result.current.capacityModal.onConfirm();
-      outcome = await promise;
+      await result.current.assign({ type: 'party', partyName: 'SMITH FAMILY' }, 't1');
     });
 
-    expect(outcome).toBe(true);
-    expect(mockAssignGuestToTable).toHaveBeenCalledWith('g-new', 't1');
-    expect(result.current.capacityModal.isOpen).toBe(false);
+    expect(tableGuestIds(result)).toEqual(['p1', 'p2']);
+    expect(result.current.seatingData.unassignedGuests.map((g) => g.id)).toEqual(['o1']);
   });
 
-  it('modal cancel → closes without assign + resolves false', async () => {
-    const guests = Array.from({ length: 8 }, (_, i) => createMockGuest({ id: `g${i}` }));
-    const table = createMockTable({ id: 't1', guests, defaultChairs: 8, maxChairs: 10 });
-    mockSeatingData = { tables: [table], unassignedGuests: [createMockGuest({ id: 'g-new' })] };
+  it('dropping back onto the source table is a silent no-op', async () => {
+    const g = createMockGuest({ id: 'g1', party: 'X' });
+    const { result } = setup([createMockTable({ id: 't1', guests: [g] })]);
 
-    const { result } = renderHook(() => useTableAssignment());
-
-    let promise: Promise<boolean>;
-    act(() => {
-      promise = result.current.assignGuestWithCapacityCheck('g-new', 't1');
-    });
-
-    expect(result.current.capacityModal.isOpen).toBe(true);
-
-    let outcome = false;
+    let ok = true;
     await act(async () => {
-      result.current.capacityModal.onCancel();
-      outcome = await promise;
+      ok = await result.current.assign(
+        { type: 'party', partyName: 'X', sourceTableId: 't1' },
+        't1',
+      );
     });
 
-    expect(outcome).toBe(false);
-    expect(mockAssignGuestToTable).not.toHaveBeenCalled();
-    expect(result.current.capacityModal.isOpen).toBe(false);
+    expect(ok).toBe(false);
+    expect(mockToast).not.toHaveBeenCalled();
+    expect(result.current.lastAssignment).toBeNull();
   });
 });
