@@ -254,6 +254,39 @@ describe('LocalStorageRepository', () => {
       expect(result.error).toMatch(/Invalid configuration/);
     });
 
+    it('importConfiguration migrates a 1.0.0 export whose tables lack tableNumber', () => {
+      const legacy = {
+        ...VALID_APP_DATA,
+        version: '1.0.0',
+        tables: [
+          {
+            id: 't1',
+            x: 0,
+            y: 0,
+            shape: 'round',
+            capacity: 8,
+            tableSize: '60" diameter',
+            commonUse: 'Banquet',
+            defaultChairs: 8,
+            maxChairs: 10,
+            guests: [],
+          },
+        ],
+      };
+      const result = repo.importConfiguration(JSON.stringify(legacy));
+      expect(result.success).toBe(true);
+      const loaded = repo.loadAppData();
+      expect(loaded.version).toBe(CURRENT_VERSION);
+      expect(loaded.tables[0]).toMatchObject({ tableNumber: 1, name: 'Table 1' });
+    });
+
+    it('importConfiguration rejects an unknown version', () => {
+      const result = repo.importConfiguration(
+        JSON.stringify({ ...VALID_APP_DATA, version: '9.9.9' }),
+      );
+      expect(result.success).toBe(false);
+    });
+
     it('importConfiguration saves colorTheme if present and valid', () => {
       const configWithTheme = {
         ...VALID_APP_DATA,
